@@ -1,4 +1,4 @@
-# Dự án TMDT - E-commerce LuxeStore
+# Dự án TMDT - E-commerce N5Store
 
 Dự án này bao gồm cấu trúc thư mục cho Frontend (React JS) và Backend (Spring Boot).
 
