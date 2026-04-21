@@ -1,0 +1,11 @@
+# Root gitignore
+fe/.env
+fe/node_modules/
+fe/dist/
+be/target/
+be/.mvn/
+be/.settings/
+be/.project/
+be/.classpath/
+.DS_Store
+*.log
