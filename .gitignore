@@ -9,3 +9,5 @@ be/.project/
 be/.classpath/
 .DS_Store
 *.log
+.idea/
+be/.env

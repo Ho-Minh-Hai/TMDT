@@ -1,0 +1,123 @@
+import React, { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import {
+    LayoutDashboard,
+    Package,
+    PlusCircle,
+    LogOut,
+    Menu,
+    X,
+    ShoppingBag,
+    User,
+    ChevronRight
+} from 'lucide-react';
+
+const SellerLayout = () => {
+    const { user, signOut } = useAuth();
+    const navigate = useNavigate();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const handleSignOut = async () => {
+        await signOut();
+        navigate('/auth');
+    };
+
+    const navItems = [
+        { path: '/seller', icon: LayoutDashboard, label: 'Tổng quan', end: true },
+        { path: '/seller/products', icon: Package, label: 'Sản phẩm', end: false },
+        { path: '/seller/products/new', icon: PlusCircle, label: 'Thêm sản phẩm', end: false },
+    ];
+
+    return (
+        <div className="seller-layout">
+            {/* Mobile overlay */}
+            {sidebarOpen && (
+                <div
+                    className="sidebar-overlay"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+                <div className="sidebar-header">
+                    <div className="sidebar-logo">
+                        <div className="sidebar-logo-icon">
+                            <ShoppingBag size={22} color="white" />
+                        </div>
+                        <span className="sidebar-logo-text">
+                            Student<span className="sidebar-logo-accent">Market</span>
+                        </span>
+                    </div>
+                    <button
+                        className="sidebar-close-btn"
+                        onClick={() => setSidebarOpen(false)}
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <nav className="sidebar-nav">
+                    <div className="sidebar-nav-label">Menu chính</div>
+                    {navItems.map((item) => (
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            end={item.end}
+                            className={({ isActive }) =>
+                                `sidebar-nav-item ${isActive ? 'sidebar-nav-active' : ''}`
+                            }
+                            onClick={() => setSidebarOpen(false)}
+                        >
+                            <item.icon size={20} />
+                            <span>{item.label}</span>
+                            <ChevronRight size={16} className="sidebar-nav-arrow" />
+                        </NavLink>
+                    ))}
+                </nav>
+
+                <div className="sidebar-footer">
+                    <div className="sidebar-user">
+                        <div className="sidebar-user-avatar">
+                            <User size={18} />
+                        </div>
+                        <div className="sidebar-user-info">
+                            <span className="sidebar-user-name">
+                                {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                            </span>
+                            <span className="sidebar-user-role">Người bán</span>
+                        </div>
+                    </div>
+                    <button className="sidebar-logout-btn" onClick={handleSignOut}>
+                        <LogOut size={18} />
+                        <span>Đăng xuất</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main content */}
+            <main className="main-content">
+                <header className="main-header">
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={() => setSidebarOpen(true)}
+                    >
+                        <Menu size={24} />
+                    </button>
+                    <div className="header-right">
+                        <div className="header-user-tag">
+                            <User size={16} />
+                            <span>{user?.email?.split('@')[0]}</span>
+                        </div>
+                    </div>
+                </header>
+                <div className="main-body">
+                    <Outlet />
+                </div>
+            </main>
+        </div>
+    );
+};
+
+export default SellerLayout;
