@@ -21,6 +21,8 @@ const Chat = () => {
 
     const messagesEndRef = useRef(null);
 
+    const API_BASE_URL = 'http://localhost:8080/api/chat';
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -33,13 +35,14 @@ const Chat = () => {
         if (!user) return;
 
         const fetchConversations = async () => {
-            const { data, error } = await supabase
-                .from('conversations')
-                .select('*')
-                .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-                .order('updated_at', { ascending: false });
-
-            if (!error) setConversations(data || []);
+            try {
+                const response = await fetch(`${API_BASE_URL}/conversations/${user.id}`);
+                const data = await response.json();
+                setConversations(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Error fetching conversations:', error);
+                setConversations([]);
+            }
         };
 
         fetchConversations();
@@ -75,18 +78,18 @@ const Chat = () => {
         return () => clearTimeout(timer);
     }, [searchTerm, user?.id]);
 
-    
     useEffect(() => {
         if (!activeConv) return;
 
         const fetchMessages = async () => {
-            const { data, error } = await supabase
-                .from('messages')
-                .select('*')
-                .eq('conversation_id', activeConv.id)
-                .order('created_at', { ascending: true });
-            
-            if (!error) setMessages(data || []);
+            try {
+                const response = await fetch(`${API_BASE_URL}/messages/${activeConv.id}`);
+                const data = await response.json();
+                setMessages(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                setMessages([]);
+            }
         };
 
         fetchMessages();
@@ -113,27 +116,16 @@ const Chat = () => {
         setSearchTerm('');
         setSearchResults([]);
 
-        const { data: existing } = await supabase
-            .from('conversations')
-            .select('*')
-            .or(`and(user1_id.eq.${user.id},user2_id.eq.${targetUser.id}),and(user1_id.eq.${targetUser.id},user2_id.eq.${user.id})`)
-            .single();
-
-        if (existing) {
-            setActiveConv(existing);
-            return;
-        }
-
-        const { data: newConv, error: createError } = await supabase
-            .from('conversations')
-            .insert([
-                { user1_id: user.id, user2_id: targetUser.id }
-            ])
-            .select()
-            .single();
-
-        if (!createError) {
-            setActiveConv(newConv);
+        try {
+            const response = await fetch(`${API_BASE_URL}/conversations/get-or-create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user1Id: user.id, user2Id: targetUser.id })
+            });
+            const data = await response.json();
+            setActiveConv(data);
+        } catch (error) {
+            console.error('Lỗi khi mở hội thoại:', error);
         }
     };
 
@@ -142,22 +134,30 @@ const Chat = () => {
         if (!newMessage.trim() || !user || !activeConv) return;
 
         setLoading(true);
-        const { error: msgError } = await supabase
-            .from('messages')
-            .insert([{
-                conversation_id: activeConv.id,
-                sender_id: user.id,
-                content: newMessage
-            }]);
-
-        if (!msgError) {
-            setNewMessage('');
-            await supabase
-                .from('conversations')
-                .update({ updated_at: new Date().toISOString() })
-                .eq('id', activeConv.id);
+        try {
+            const response = await fetch(`${API_BASE_URL}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: activeConv.id,
+                    sender_id: user.id,
+                    content: newMessage,
+                    message_type: 'text'
+                })
+            });
+            
+            if (response.ok) {
+                setNewMessage('');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
         }
         setLoading(false);
+    };
+
+    const formatTime = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     };
 
     return (
@@ -251,16 +251,19 @@ const Chat = () => {
                             </div>
 
                             <div className="messages-area">
-                                {messages.map((msg, index) => (
-                                    <motion.div
-                                        key={msg.id || index}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
-                                    >
-                                        {msg.content}
-                                    </motion.div>
-                                ))}
+                                <AnimatePresence initial={false}>
+                                    {messages.map((msg, index) => (
+                                        <motion.div
+                                            key={msg.id || index}
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
+                                        >
+                                            <div>{msg.content}</div>
+                                            <span className="message-time">{formatTime(msg.created_at)}</span>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                                 <div ref={messagesEndRef} />
                             </div>
 
