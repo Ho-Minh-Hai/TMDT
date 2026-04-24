@@ -32,6 +32,27 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Update user profile in the profiles table
+    const updateProfile = async (updates) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', user.id)
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+            setProfile(data);
+            return { data, error: null };
+        } catch (err) {
+            console.error('Failed to update profile:', err);
+            return { data: null, error: err };
+        }
+    };
+
     useEffect(() => {
         isMounted.current = true;
 
@@ -87,6 +108,7 @@ export const AuthProvider = ({ children }) => {
         session,
         getAccessToken,
         fetchProfile,
+        updateProfile,
     };
 
     // Show a loading indicator while restoring session

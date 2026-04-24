@@ -36,13 +36,13 @@ const Home = () => {
                     )}
                 </div>
 
-                <div className="user-tag">
+                <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
-                    <button onClick={signOut} className="auth-switch" style={{ marginLeft: '1rem' }}>
+                    <button onClick={(e) => { e.preventDefault(); signOut(); }} className="auth-switch" style={{ marginLeft: '1rem' }}>
                         <LogOut size={16} />
                     </button>
-                </div>
+                </Link>
             </nav>
 
             <header className="hero">
