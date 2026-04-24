@@ -34,8 +34,10 @@ const Home = () => {
                     <Link to="/chat" className="nav-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Trò chuyện
                     </Link>
-                    {userRole === 'seller' && (
+                    {userRole === 'seller' ? (
                         <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Quản lý bán hàng</Link>
+                    ) : (
+                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
                     )}
                 </div>
 

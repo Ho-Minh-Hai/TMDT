@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
-import { Mail, Lock, User, ArrowRight, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,7 +15,6 @@ const Auth = () => {
         email: '',
         password: '',
         username: '',
-        role: 'buyer',
     });
 
     const handleSubmit = async (e) => {
@@ -38,7 +37,7 @@ const Auth = () => {
                     options: {
                         data: {
                             full_name: formData.username,
-                            role: formData.role,
+                            role: 'user',
                         },
                         emailRedirectTo: window.location.origin
                     }
@@ -53,10 +52,7 @@ const Auth = () => {
         }
     };
 
-    const roles = [
-        { value: 'buyer', label: 'Người mua', desc: 'Mua sắm sản phẩm' },
-        { value: 'seller', label: 'Người bán', desc: 'Đăng bán sản phẩm' },
-    ];
+
 
     return (
         <div className="auth-container">
@@ -136,28 +132,7 @@ const Auth = () => {
                                 />
                             </div>
 
-                            {/* Role selector — only shown during registration */}
-                            {!isLogin && (
-                                <div className="role-selector">
-                                    <label className="role-selector-label">
-                                        <ShieldCheck size={16} />
-                                        <span>Bạn muốn đăng ký với vai trò</span>
-                                    </label>
-                                    <div className="role-options">
-                                        {roles.map((role) => (
-                                            <button
-                                                key={role.value}
-                                                type="button"
-                                                className={`role-option ${formData.role === role.value ? 'role-option-active' : ''}`}
-                                                onClick={() => setFormData({...formData, role: role.value})}
-                                            >
-                                                <span className="role-option-label">{role.label}</span>
-                                                <span className="role-option-desc">{role.desc}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
 
                             {error && (
                                 <div className="error-message">{error}</div>
