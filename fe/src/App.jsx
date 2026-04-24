@@ -49,27 +49,27 @@ function App() {
             <Router>
                 <Routes>
                     {/* Auth page — only for unauthenticated users */}
-                    <Route 
-                        path="/auth" 
+                    <Route
+                        path="/auth"
                         element={
                             <AuthRoute>
                                 <Auth />
                             </AuthRoute>
-                        } 
+                        }
                     />
 
                     {/* Home page — default interface for purchases */}
-                    <Route 
-                        path="/home" 
+                    <Route
+                        path="/home"
                         element={
                             <ProtectedRoute>
                                 <Home />
                             </ProtectedRoute>
-                        } 
+                        }
                     />
 
                     {/* Product management routes — accessible to all authenticated users */}
-                    <Route 
+                    <Route
                         path="/seller"
                         element={
                             <ProtectedRoute>
@@ -82,7 +82,15 @@ function App() {
                         <Route path="products/new" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
                     </Route>
-
+                    {/* Profile page */}
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <Profile />
+                            </ProtectedRoute>
+                        }
+                    />
                     {/* Catch-all — redirect based on auth state */}
                     <Route path="*" element={<CatchAllRedirect />} />
                 </Routes>
