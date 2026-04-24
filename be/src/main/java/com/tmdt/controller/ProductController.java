@@ -28,11 +28,11 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<?> getProducts(@AuthenticationPrincipal UserPrincipal principal) {
         try {
-            // Verify seller role
+            // Verify user role
             Map<String, Object> profile = supabaseService.getProfile(principal.getUserId());
-            if (profile == null || !"seller".equals(profile.get("role"))) {
+            if (profile == null || !"user".equals(profile.get("role"))) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only sellers can access this resource"));
+                        .body(Map.of("error", "Only users can access this resource"));
             }
 
             List<Product> products = supabaseService.getProductsBySeller(principal.getUserId());
@@ -67,11 +67,11 @@ public class ProductController {
     public ResponseEntity<?> createProduct(@Valid @RequestBody ProductRequest request,
                                             @AuthenticationPrincipal UserPrincipal principal) {
         try {
-            // Verify seller role
+            // Verify user role
             Map<String, Object> profile = supabaseService.getProfile(principal.getUserId());
-            if (profile == null || !"seller".equals(profile.get("role"))) {
+            if (profile == null || !"user".equals(profile.get("role"))) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only sellers can create products"));
+                        .body(Map.of("error", "Only users can create products"));
             }
 
             Map<String, Object> productData = buildProductMap(request, principal.getUserId());

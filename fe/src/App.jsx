@@ -21,46 +21,24 @@ const ProtectedRoute = ({ children }) => {
 };
 
 /**
- * Guards seller-only routes.
- * Redirects non-seller users to /home.
- */
-const SellerRoute = ({ children }) => {
-    const { user, userRole } = useAuth();
-    if (!user) {
-        return <Navigate to="/auth" />;
-    }
-    if (userRole !== 'seller') {
-        return <Navigate to="/home" />;
-    }
-    return children;
-};
-
-/**
  * Prevents authenticated users from accessing the auth page.
- * Redirects based on role.
+ * Redirects to /home after login.
  */
 const AuthRoute = ({ children }) => {
-    const { user, userRole } = useAuth();
+    const { user } = useAuth();
     if (user) {
-        // Role-based redirect after login
-        if (userRole === 'seller') {
-            return <Navigate to="/seller" />;
-        }
         return <Navigate to="/home" />;
     }
     return children;
 };
 
 /**
- * Catches all unmatched routes and redirects based on auth/role state.
+ * Catches all unmatched routes and redirects based on auth state.
  */
 const CatchAllRedirect = () => {
-    const { user, userRole } = useAuth();
+    const { user } = useAuth();
     if (!user) {
         return <Navigate to="/auth" />;
-    }
-    if (userRole === 'seller') {
-        return <Navigate to="/seller" />;
     }
     return <Navigate to="/home" />;
 };
@@ -80,7 +58,7 @@ function App() {
                         } 
                     />
 
-                    {/* Buyer/default home page */}
+                    {/* Home page — default interface for purchases */}
                     <Route 
                         path="/home" 
                         element={
@@ -90,13 +68,13 @@ function App() {
                         } 
                     />
 
-                    {/* Seller routes — only for users with role 'seller' */}
+                    {/* Product management routes — accessible to all authenticated users */}
                     <Route 
                         path="/seller"
                         element={
-                            <SellerRoute>
+                            <ProtectedRoute>
                                 <SellerLayout />
-                            </SellerRoute>
+                            </ProtectedRoute>
                         }
                     >
                         <Route index element={<SellerDashboard />} />
@@ -105,7 +83,7 @@ function App() {
                         <Route path="products/:id/edit" element={<ProductForm />} />
                     </Route>
 
-                    {/* Catch-all — redirect based on role */}
+                    {/* Catch-all — redirect based on auth state */}
                     <Route path="*" element={<CatchAllRedirect />} />
                 </Routes>
             </Router>

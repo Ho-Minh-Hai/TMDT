@@ -73,8 +73,8 @@ export const AuthProvider = ({ children }) => {
         return session?.access_token ?? null;
     };
 
-    // Derive role from profile (defaults to 'buyer' if no profile yet)
-    const userRole = profile?.role || 'buyer';
+    // Derive role from profile (defaults to 'user' if no profile yet)
+    const userRole = profile?.role || 'user';
 
     // Will be passed down to Signup, Login and Dashboard components
     const value = {
