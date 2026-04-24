@@ -91,7 +91,7 @@ const SellerLayout = () => {
                                 {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0]}
                             </span>
                             <span className="sidebar-user-role">
-                                {profile?.role === 'seller' ? 'Người bán' : 'Người mua'}
+                                {profile?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
                             </span>
                         </div>
                     </Link>

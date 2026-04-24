@@ -31,9 +31,7 @@ const Home = () => {
                     <a href="#" className="nav-link">Bộ sưu tập</a>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
-                    {userRole === 'seller' && (
-                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Quản lý bán hàng</Link>
-                    )}
+                    <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
