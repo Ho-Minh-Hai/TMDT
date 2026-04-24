@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const SellerLayout = () => {
-    const { user, signOut } = useAuth();
+    const { user, profile, signOut } = useAuth();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -84,9 +84,11 @@ const SellerLayout = () => {
                         </div>
                         <div className="sidebar-user-info">
                             <span className="sidebar-user-name">
-                                {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                                {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0]}
                             </span>
-                            <span className="sidebar-user-role">Người bán</span>
+                            <span className="sidebar-user-role">
+                                {profile?.role === 'seller' ? 'Người bán' : 'Người mua'}
+                            </span>
                         </div>
                     </div>
                     <button className="sidebar-logout-btn" onClick={handleSignOut}>

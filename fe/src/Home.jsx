@@ -1,11 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const Home = () => {
-    const { user, signOut } = useAuth();
+    const { user, profile, userRole, signOut } = useAuth();
 
     const products = [
         { id: 1, name: 'Premium Cloud Watch', price: '$299', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80', rating: 4.8 },
@@ -30,11 +31,14 @@ const Home = () => {
                     <a href="#" className="nav-link">Bộ sưu tập</a>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
+                    {userRole === 'seller' && (
+                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Quản lý bán hàng</Link>
+                    )}
                 </div>
 
                 <div className="user-tag">
                     <User size={18} />
-                    <span style={{ fontSize: '0.9rem' }}>{user?.email?.split('@')[0]}</span>
+                    <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
                     <button onClick={signOut} className="auth-switch" style={{ marginLeft: '1rem' }}>
                         <LogOut size={16} />
                     </button>
