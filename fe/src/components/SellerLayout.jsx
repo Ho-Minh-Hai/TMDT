@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard,
@@ -78,9 +78,13 @@ const SellerLayout = () => {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <div className="sidebar-user">
+                    <Link to="/profile" className="sidebar-user" style={{ textDecoration: 'none', color: 'inherit' }}>
                         <div className="sidebar-user-avatar">
-                            <User size={18} />
+                            {profile?.avatar_url ? (
+                                <img src={profile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            ) : (
+                                <User size={18} />
+                            )}
                         </div>
                         <div className="sidebar-user-info">
                             <span className="sidebar-user-name">
@@ -90,7 +94,7 @@ const SellerLayout = () => {
                                 {profile?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
                             </span>
                         </div>
-                    </div>
+                    </Link>
                     <button className="sidebar-logout-btn" onClick={handleSignOut}>
                         <LogOut size={18} />
                         <span>Đăng xuất</span>
@@ -108,10 +112,10 @@ const SellerLayout = () => {
                         <Menu size={24} />
                     </button>
                     <div className="header-right">
-                        <div className="header-user-tag">
+                        <Link to="/profile" className="header-user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                             <User size={16} />
-                            <span>{user?.email?.split('@')[0]}</span>
-                        </div>
+                            <span>{profile?.full_name || user?.email?.split('@')[0]}</span>
+                        </Link>
                     </div>
                 </header>
                 <div className="main-body">
