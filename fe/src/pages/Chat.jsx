@@ -10,7 +10,9 @@ import './Chat.css';
 const Chat = () => {
     const { user } = useAuth();
     const [conversations, setConversations] = useState([]);
+    const [conversationUsers, setConversationUsers] = useState({});
     const [activeConv, setActiveConv] = useState(null);
+    const [activeUser, setActiveUser] = useState(null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -22,6 +24,27 @@ const Chat = () => {
     const messagesEndRef = useRef(null);
 
     const API_BASE_URL = 'http://localhost:8080/api/chat';
+
+    const getOtherUserId = (conv) => {
+        return conv.user1_id === user?.id ? conv.user2_id : conv.user1_id;
+    };
+
+    const fetchUserInfo = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .eq('id', userId)
+                .single();
+            
+            if (!error && data) {
+                return data;
+            }
+        } catch (error) {
+            console.error('Error fetching user info:', error);
+        }
+        return null;
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,7 +61,19 @@ const Chat = () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/conversations/${user.id}`);
                 const data = await response.json();
-                setConversations(Array.isArray(data) ? data : []);
+                const convs = Array.isArray(data) ? data : [];
+                setConversations(convs);
+
+                // Fetch user info for each conversation
+                const userInfoMap = {};
+                for (const conv of convs) {
+                    const otherUserId = getOtherUserId(conv);
+                    const userInfo = await fetchUserInfo(otherUserId);
+                    if (userInfo) {
+                        userInfoMap[conv.id] = userInfo;
+                    }
+                }
+                setConversationUsers(userInfoMap);
             } catch (error) {
                 console.error('Error fetching conversations:', error);
                 setConversations([]);
@@ -120,12 +155,27 @@ const Chat = () => {
             const response = await fetch(`${API_BASE_URL}/conversations/get-or-create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user1Id: user.id, user2Id: targetUser.id })
+                body: JSON.stringify({ user1_id: user.id, user2_id: targetUser.id })
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Lỗi từ server:', errorData);
+                alert('Không thể tạo cuộc trò chuyện. Vui lòng thử lại!');
+                return;
+            }
+            
             const data = await response.json();
-            setActiveConv(data);
+            if (data && data.id) {
+                setActiveConv(data);
+                setActiveUser(targetUser);
+            } else {
+                console.error('Dữ liệu conversation không hợp lệ:', data);
+                alert('Dữ liệu không hợp lệ. Vui lòng thử lại!');
+            }
         } catch (error) {
             console.error('Lỗi khi mở hội thoại:', error);
+            alert('Lỗi khi mở hội thoại: ' + error.message);
         }
     };
 
@@ -148,9 +198,14 @@ const Chat = () => {
             
             if (response.ok) {
                 setNewMessage('');
+            } else {
+                const errorData = await response.json();
+                console.error('Lỗi gửi tin nhắn:', errorData);
+                alert('Không thể gửi tin nhắn. Vui lòng thử lại!');
             }
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('Lỗi gửi tin nhắn:', error);
+            alert('Lỗi: ' + error.message);
         }
         setLoading(false);
     };
@@ -222,21 +277,31 @@ const Chat = () => {
                     </div>
 
                     <div className="user-list">
-                        {conversations.map(conv => (
+                        {conversations.map(conv => {
+                            const convUser = conversationUsers[conv.id];
+                            return (
                             <div 
                                 key={conv.id} 
                                 className={`user-item ${activeConv?.id === conv.id ? 'active' : ''}`}
-                                onClick={() => setActiveConv(conv)}
+                                onClick={() => {
+                                    setActiveConv(conv);
+                                    setActiveUser(convUser);
+                                }}
                             >
-                                <div className="user-avatar" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <MessageSquare size={20} color={activeConv?.id === conv.id ? 'white' : 'var(--primary)'} />
+                                <div className="user-avatar" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                    {convUser?.avatar_url ? (
+                                        <img src={convUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <User size={20} color={activeConv?.id === conv.id ? 'white' : 'var(--primary)'} />
+                                    )}
                                 </div>
                                 <div className="user-info">
-                                    <h4>{conv.id.substring(0, 8)}...</h4>
+                                    <h4>{convUser?.full_name || 'User'}</h4>
                                     <p>Nhấn để xem tin nhắn</p>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -245,8 +310,16 @@ const Chat = () => {
                         <>
                             <div className="chat-header">
                                 <div className="header-user">
-                                    <div className="status-dot"></div>
-                                    <h4>Cuộc trò chuyện</h4>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', marginRight: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)' }}>
+                                        {activeUser?.avatar_url ? (
+                                            <img src={activeUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <User size={20} />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h4>{activeUser?.full_name}</h4>
+                                    </div>
                                 </div>
                             </div>
 

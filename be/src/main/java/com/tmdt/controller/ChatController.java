@@ -24,7 +24,7 @@ public class ChatController {
 
     @PostMapping("/conversations/get-or-create")
     public Conversation getOrCreateConversation(@RequestBody Map<String, String> params) {
-        return supabaseService.getOrCreateConversation(params.get("user1Id"), params.get("user2Id"));
+        return supabaseService.getOrCreateConversation(params.get("user1_id"), params.get("user2_id"));
     }
 
     @GetMapping("/messages/{conversationId}")

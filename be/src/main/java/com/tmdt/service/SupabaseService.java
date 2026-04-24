@@ -168,34 +168,40 @@ public class SupabaseService {
     // ==================== CHAT ====================
 
     public List<Conversation> getConversations(String userId) {
-        String url = supabaseUrl + "/rest/v1/conversations?or=(user1_id.eq." + userId + ",user2_id.eq." + userId + ")&order=updated_at.desc";
-        
-        HttpHeaders headers = createHeaders();
-        headers.set("Accept", "application/json");
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
-        );
-
         try {
+            String url = supabaseUrl + "/rest/v1/conversations?or=(user1_id.eq." + userId + ",user2_id.eq." + userId + ")&order=updated_at.desc";
+            
+            HttpHeaders headers = createHeaders();
+            headers.set("Accept", "application/json");
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Supabase API returned status: " + response.getStatusCode());
+            }
+
             return objectMapper.readValue(response.getBody(), new TypeReference<List<Conversation>>() {});
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get conversations", e);
+            System.err.println("Error in getConversations: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get conversations: " + e.getMessage(), e);
         }
     }
 
     public Conversation getOrCreateConversation(String user1Id, String user2Id) {
-        // Tìm hội thoại hiện có
-        String url = supabaseUrl + "/rest/v1/conversations?or=(and(user1_id.eq." + user1Id + ",user2_id.eq." + user2Id + "),and(user1_id.eq." + user2Id + ",user2_id.eq." + user1Id + "))";
-        
-        HttpHeaders headers = createHeaders();
-        headers.set("Accept", "application/json");
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
-        );
-
         try {
+            // Tìm hội thoại hiện có
+            String url = supabaseUrl + "/rest/v1/conversations?or=(and(user1_id.eq." + user1Id + ",user2_id.eq." + user2Id + "),and(user1_id.eq." + user2Id + ",user2_id.eq." + user1Id + "))";
+            
+            HttpHeaders headers = createHeaders();
+            headers.set("Accept", "application/json");
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+            );
+
             List<Conversation> list = objectMapper.readValue(response.getBody(), new TypeReference<List<Conversation>>() {});
             if (!list.isEmpty()) return list.get(0);
 
@@ -208,54 +214,87 @@ public class SupabaseService {
             body.put("user1_id", user1Id);
             body.put("user2_id", user2Id);
 
+            String bodyJson = objectMapper.writeValueAsString(body);
+            System.out.println("Creating conversation with body: " + bodyJson);
+
             ResponseEntity<String> postRes = restTemplate.exchange(
-                    postUrl, HttpMethod.POST, new HttpEntity<>(objectMapper.writeValueAsString(body), headers), String.class
+                    postUrl, HttpMethod.POST, new HttpEntity<>(bodyJson, headers), String.class
             );
 
+            if (!postRes.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Supabase API returned status: " + postRes.getStatusCode() + " - " + postRes.getBody());
+            }
+
             List<Conversation> created = objectMapper.readValue(postRes.getBody(), new TypeReference<List<Conversation>>() {});
+            if (created.isEmpty()) {
+                throw new RuntimeException("Conversation creation returned empty list");
+            }
             return created.get(0);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get or create conversation", e);
+            System.err.println("Error in getOrCreateConversation: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get or create conversation: " + e.getMessage(), e);
         }
     }
 
     public List<Message> getMessages(String conversationId) {
-        String url = supabaseUrl + "/rest/v1/messages?conversation_id=eq." + conversationId + "&order=created_at.asc";
-        
-        HttpHeaders headers = createHeaders();
-        headers.set("Accept", "application/json");
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
-        );
-
         try {
+            String url = supabaseUrl + "/rest/v1/messages?conversation_id=eq." + conversationId + "&order=created_at.asc";
+            
+            HttpHeaders headers = createHeaders();
+            headers.set("Accept", "application/json");
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Supabase API returned status: " + response.getStatusCode());
+            }
+
             return objectMapper.readValue(response.getBody(), new TypeReference<List<Message>>() {});
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get messages", e);
+            System.err.println("Error in getMessages: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get messages: " + e.getMessage(), e);
         }
     }
 
     public Message createMessage(Map<String, Object> messageData) {
-        String url = supabaseUrl + "/rest/v1/messages";
-
-        HttpHeaders headers = createHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Prefer", "return=representation");
-
         try {
+            String url = supabaseUrl + "/rest/v1/messages";
+
+            HttpHeaders headers = createHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Prefer", "return=representation");
+
+            String bodyJson = objectMapper.writeValueAsString(messageData);
+            System.out.println("Creating message with data: " + bodyJson);
+
             ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.POST, new HttpEntity<>(objectMapper.writeValueAsString(messageData), headers), String.class
+                    url, HttpMethod.POST, new HttpEntity<>(bodyJson, headers), String.class
             );
 
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Supabase API returned status: " + response.getStatusCode() + " - " + response.getBody());
+            }
+
             // Cập nhật updated_at cho conversation
-            String convId = messageData.get("conversation_id").toString();
-            updateConversationTime(convId);
+            Object convIdObj = messageData.get("conversation_id");
+            if (convIdObj != null) {
+                String convId = convIdObj.toString();
+                updateConversationTime(convId);
+            }
 
             List<Message> messages = objectMapper.readValue(response.getBody(), new TypeReference<List<Message>>() {});
+            if (messages.isEmpty()) {
+                throw new RuntimeException("Message creation returned empty list");
+            }
             return messages.get(0);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create message", e);
+            System.err.println("Error in createMessage: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create message: " + e.getMessage(), e);
         }
     }
 
