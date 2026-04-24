@@ -2,11 +2,16 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Auth from './Auth';
+import Home from './Home';
 import SellerLayout from './components/SellerLayout';
 import SellerDashboard from './pages/SellerDashboard';
 import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
 
+/**
+ * Protects routes that require authentication.
+ * Redirects unauthenticated users to /auth.
+ */
 const ProtectedRoute = ({ children }) => {
     const { user } = useAuth();
     if (!user) {
@@ -15,12 +20,49 @@ const ProtectedRoute = ({ children }) => {
     return children;
 };
 
-const AuthRoute = ({ children }) => {
-    const { user } = useAuth();
-    if (user) {
-        return <Navigate to="/seller" />;
+/**
+ * Guards seller-only routes.
+ * Redirects non-seller users to /home.
+ */
+const SellerRoute = ({ children }) => {
+    const { user, userRole } = useAuth();
+    if (!user) {
+        return <Navigate to="/auth" />;
+    }
+    if (userRole !== 'seller') {
+        return <Navigate to="/home" />;
     }
     return children;
+};
+
+/**
+ * Prevents authenticated users from accessing the auth page.
+ * Redirects based on role.
+ */
+const AuthRoute = ({ children }) => {
+    const { user, userRole } = useAuth();
+    if (user) {
+        // Role-based redirect after login
+        if (userRole === 'seller') {
+            return <Navigate to="/seller" />;
+        }
+        return <Navigate to="/home" />;
+    }
+    return children;
+};
+
+/**
+ * Catches all unmatched routes and redirects based on auth/role state.
+ */
+const CatchAllRedirect = () => {
+    const { user, userRole } = useAuth();
+    if (!user) {
+        return <Navigate to="/auth" />;
+    }
+    if (userRole === 'seller') {
+        return <Navigate to="/seller" />;
+    }
+    return <Navigate to="/home" />;
 };
 
 function App() {
@@ -28,6 +70,7 @@ function App() {
         <AuthProvider>
             <Router>
                 <Routes>
+                    {/* Auth page — only for unauthenticated users */}
                     <Route 
                         path="/auth" 
                         element={
@@ -36,12 +79,24 @@ function App() {
                             </AuthRoute>
                         } 
                     />
+
+                    {/* Buyer/default home page */}
+                    <Route 
+                        path="/home" 
+                        element={
+                            <ProtectedRoute>
+                                <Home />
+                            </ProtectedRoute>
+                        } 
+                    />
+
+                    {/* Seller routes — only for users with role 'seller' */}
                     <Route 
                         path="/seller"
                         element={
-                            <ProtectedRoute>
+                            <SellerRoute>
                                 <SellerLayout />
-                            </ProtectedRoute>
+                            </SellerRoute>
                         }
                     >
                         <Route index element={<SellerDashboard />} />
@@ -49,7 +104,9 @@ function App() {
                         <Route path="products/new" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
                     </Route>
-                    <Route path="*" element={<Navigate to="/seller" />} />
+
+                    {/* Catch-all — redirect based on role */}
+                    <Route path="*" element={<CatchAllRedirect />} />
                 </Routes>
             </Router>
         </AuthProvider>
