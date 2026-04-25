@@ -7,6 +7,7 @@ import SellerLayout from './components/SellerLayout';
 import SellerDashboard from './pages/SellerDashboard';
 import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
+import ProductDetailPage from "./pages/ProductDetail.jsx";
 
 /**
  * Protects routes that require authentication.
@@ -104,8 +105,10 @@ function App() {
                         <Route path="products/new" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
                     </Route>
+                    {/* <Route path="/" element={<HomePage />} /> */}
 
-                    {/* Catch-all — redirect based on role */}
+                    {/* product/1 */}
+                    <Route path="/product/:id" element={<ProductDetailPage />} />
                     <Route path="*" element={<CatchAllRedirect />} />
                 </Routes>
             </Router>
