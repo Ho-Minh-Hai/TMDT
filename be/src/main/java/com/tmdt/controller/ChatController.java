@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -35,5 +37,15 @@ public class ChatController {
     @PostMapping("/messages")
     public Message sendMessage(@RequestBody Map<String, Object> messageData) {
         return supabaseService.createMessage(messageData);
+    }
+
+    @PostMapping("/messages/mark-read")
+    public ResponseEntity<?> markMessagesAsRead(@RequestBody Map<String, String> params) {
+        try {
+            supabaseService.markMessagesAsRead(params.get("conversation_id"), params.get("user_id"));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        }
     }
 }

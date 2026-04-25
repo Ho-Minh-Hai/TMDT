@@ -16,6 +16,7 @@ const Chat = () => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [unreadCounts, setUnreadCounts] = useState({});
     
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -50,6 +51,27 @@ const Chat = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    const markAsRead = async (conversationId) => {
+        if (!conversationId || !user) return;
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/messages/mark-read`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    user_id: user.id
+                })
+            });
+                
+            if (response.ok) {
+                setUnreadCounts(prev => ({ ...prev, [conversationId]: 0 }));
+            }
+        } catch (error) {
+            console.error('Error marking messages as read:', error);
+        }
+    };
+
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -74,6 +96,23 @@ const Chat = () => {
                     }
                 }
                 setConversationUsers(userInfoMap);
+                // Fetch unread counts
+                if (convs.length > 0) {
+                    const { data: unreadData, error: unreadError } = await supabase
+                        .from('messages')
+                        .select('conversation_id')
+                        .neq('sender_id', user.id)
+                        .is('read_at', null)
+                        .in('conversation_id', convs.map(c => c.id));
+                        
+                    if (!unreadError && unreadData) {
+                        const counts = {};
+                        unreadData.forEach(msg => {
+                            counts[msg.conversation_id] = (counts[msg.conversation_id] || 0) + 1;
+                        });
+                        setUnreadCounts(counts);
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching conversations:', error);
                 setConversations([]);
@@ -87,7 +126,34 @@ const Chat = () => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, fetchConversations)
             .subscribe();
 
-        return () => supabase.removeChannel(convChannel);
+        const globalMsgChannel = supabase
+            .channel('global:messages')
+            .on('postgres_changes', 
+                { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'messages',
+                }, 
+                (payload) => {
+                    if (payload.new.sender_id !== user.id) {
+                        setUnreadCounts(prev => {
+                            // If we are currently active on this conversation, do not increment (it will be marked read)
+                            // However, we don't have activeConv in this closure's dependency, so we just increment it.
+                            // The activeConv effect will mark it read anyway.
+                            return {
+                                ...prev,
+                                [payload.new.conversation_id]: (prev[payload.new.conversation_id] || 0) + 1
+                            };
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(convChannel);
+            supabase.removeChannel(globalMsgChannel);
+        };
     }, [user]);
 
     useEffect(() => {
@@ -121,6 +187,8 @@ const Chat = () => {
                 const response = await fetch(`${API_BASE_URL}/messages/${activeConv.id}`);
                 const data = await response.json();
                 setMessages(Array.isArray(data) ? data : []);
+                // Mark messages as read after successfully fetching them
+                await markAsRead(activeConv.id);
             } catch (error) {
                 console.error('Error fetching messages:', error);
                 setMessages([]);
@@ -140,6 +208,9 @@ const Chat = () => {
                 }, 
                 (payload) => {
                     setMessages((prev) => [...prev, payload.new]);
+                    if (payload.new.sender_id !== user?.id) {
+                        markAsRead(activeConv.id);
+                    }
                 }
             )
             .subscribe();
@@ -299,6 +370,11 @@ const Chat = () => {
                                     <h4>{convUser?.full_name || 'User'}</h4>
                                     <p>Nhấn để xem tin nhắn</p>
                                 </div>
+                                {unreadCounts[conv.id] > 0 && (
+                                    <div className="unread-badge">
+                                        {unreadCounts[conv.id]}
+                                    </div>
+                                )}
                             </div>
                             );
                         })}

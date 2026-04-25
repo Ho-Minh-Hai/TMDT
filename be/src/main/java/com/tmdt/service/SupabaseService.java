@@ -23,10 +23,12 @@ public class SupabaseService {
     @Value("${supabase.key}")
     private String supabaseServiceKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     public SupabaseService() {
+        this.restTemplate = new RestTemplate();
+        this.restTemplate.setRequestFactory(new org.springframework.http.client.JdkClientHttpRequestFactory());
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -295,6 +297,30 @@ public class SupabaseService {
             System.err.println("Error in createMessage: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to create message: " + e.getMessage(), e);
+        }
+    }
+
+    public void markMessagesAsRead(String conversationId, String userId) {
+        String url = supabaseUrl + "/rest/v1/messages?conversation_id=eq." + conversationId + "&sender_id=neq." + userId + "&read_at=is.null";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=minimal");
+
+        Map<String, String> body = new HashMap<>();
+        body.put("read_at", java.time.OffsetDateTime.now().toString());
+
+        try {
+            String bodyJson = objectMapper.writeValueAsString(body);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PATCH, new HttpEntity<>(bodyJson, headers), String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Failed to mark messages as read: " + response.getBody());
+            }
+        } catch (Exception e) {
+            System.err.println("Error in markMessagesAsRead: " + e.getMessage());
+            throw new RuntimeException("Failed to mark messages as read: " + e.getMessage(), e);
         }
     }
 
