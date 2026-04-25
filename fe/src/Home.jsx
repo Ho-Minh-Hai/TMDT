@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
@@ -31,7 +31,14 @@ const Home = () => {
                     <a href="#" className="nav-link">Bộ sưu tập</a>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
+                    <Link to="/chat" className="nav-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        Trò chuyện
+                    </Link>
+                    {userRole === 'seller' ? (
+                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Quản lý bán hàng</Link>
+                    ) : (
+                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
+                    )}
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
