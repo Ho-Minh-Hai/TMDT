@@ -16,17 +16,62 @@ public class TmdtApplication {
 
 	private static void loadDotenv() {
 		try {
-			Dotenv dotenv = Dotenv.configure()
-					.directory(System.getProperty("user.dir"))
-					.ignoreIfMissing()
-					.load();
+			// Try multiple paths to find .env file
+			String[] possiblePaths = {
+				System.getProperty("user.dir") + "/be",           // When running from parent dir
+				System.getProperty("user.dir"),                   // When running from be dir
+				System.getProperty("user.dir") + "/../be",        // Relative path
+				new java.io.File("").getAbsolutePath() + "/be"    // JAR location + be folder
+			};
+			
+			Dotenv dotenv = null;
+			String loadedFrom = null;
+			
+			for (String path : possiblePaths) {
+				try {
+					java.io.File envFile = new java.io.File(path, ".env");
+					if (envFile.exists()) {
+						dotenv = Dotenv.configure()
+								.directory(path)
+								.ignoreIfMissing()
+								.load();
+						
+						// Check if we actually loaded something
+						if (dotenv != null && dotenv.get("SUPABASE_URL") != null) {
+							loadedFrom = path;
+							System.out.println("✓ .env loaded from: " + path);
+							break;
+						}
+					}
+				} catch (Exception e) {
+					// Continue to next path
+				}
+			}
+			
+			if (dotenv == null || loadedFrom == null) {
+				System.err.println("✗ WARNING: .env file not found in any of the expected paths!");
+				System.err.println("  Searched: ");
+				for (String path : possiblePaths) {
+					System.err.println("    - " + path);
+				}
+				return;
+			}
+			
+			// Load all properties from .env into System properties
 			dotenv.entries().forEach(entry -> {
-				if (System.getProperty(entry.getKey()) == null) {
-					System.setProperty(entry.getKey(), entry.getValue());
+				String key = entry.getKey();
+				String value = entry.getValue();
+				if (System.getProperty(key) == null && value != null) {
+					System.setProperty(key, value);
+					if (key.contains("SUPABASE")) {
+						System.out.println("  → Loaded: " + key);
+					}
 				}
 			});
+			
 		} catch (Exception e) {
-			System.err.println("Warning: Could not load .env file: " + e.getMessage());
+			System.err.println("✗ Error loading .env file: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }
