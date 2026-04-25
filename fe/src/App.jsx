@@ -7,6 +7,8 @@ import SellerLayout from './components/SellerLayout';
 import SellerDashboard from './pages/SellerDashboard';
 import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
+import Profile from './pages/Profile';
+import Chat from './pages/Chat';
 import ProductDetailPage from "./pages/ProductDetail.jsx";
 
 /**
@@ -22,46 +24,24 @@ const ProtectedRoute = ({ children }) => {
 };
 
 /**
- * Guards seller-only routes.
- * Redirects non-seller users to /home.
- */
-const SellerRoute = ({ children }) => {
-    const { user, userRole } = useAuth();
-    if (!user) {
-        return <Navigate to="/auth" />;
-    }
-    if (userRole !== 'seller') {
-        return <Navigate to="/home" />;
-    }
-    return children;
-};
-
-/**
  * Prevents authenticated users from accessing the auth page.
- * Redirects based on role.
+ * Redirects to /home after login.
  */
 const AuthRoute = ({ children }) => {
-    const { user, userRole } = useAuth();
+    const { user } = useAuth();
     if (user) {
-        // Role-based redirect after login
-        if (userRole === 'seller') {
-            return <Navigate to="/seller" />;
-        }
         return <Navigate to="/home" />;
     }
     return children;
 };
 
 /**
- * Catches all unmatched routes and redirects based on auth/role state.
+ * Catches all unmatched routes and redirects based on auth state.
  */
 const CatchAllRedirect = () => {
-    const { user, userRole } = useAuth();
+    const { user } = useAuth();
     if (!user) {
         return <Navigate to="/auth" />;
-    }
-    if (userRole === 'seller') {
-        return <Navigate to="/seller" />;
     }
     return <Navigate to="/home" />;
 };
@@ -72,32 +52,32 @@ function App() {
             <Router>
                 <Routes>
                     {/* Auth page — only for unauthenticated users */}
-                    <Route 
-                        path="/auth" 
+                    <Route
+                        path="/auth"
                         element={
                             <AuthRoute>
                                 <Auth />
                             </AuthRoute>
-                        } 
+                        }
                     />
 
-                    {/* Buyer/default home page */}
-                    <Route 
-                        path="/home" 
+                    {/* Home page — default interface for purchases */}
+                    <Route
+                        path="/home"
                         element={
                             <ProtectedRoute>
                                 <Home />
                             </ProtectedRoute>
-                        } 
+                        }
                     />
 
-                    {/* Seller routes — only for users with role 'seller' */}
-                    <Route 
+                    {/* Product management routes — accessible to all authenticated users */}
+                    <Route
                         path="/seller"
                         element={
-                            <SellerRoute>
+                            <ProtectedRoute>
                                 <SellerLayout />
-                            </SellerRoute>
+                            </ProtectedRoute>
                         }
                     >
                         <Route index element={<SellerDashboard />} />
@@ -105,10 +85,30 @@ function App() {
                         <Route path="products/new" element={<ProductForm />} />
                         <Route path="products/:id/edit" element={<ProductForm />} />
                     </Route>
-                    {/* <Route path="/" element={<HomePage />} /> */}
 
+                    {/* Profile page */}
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <Profile />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/chat"
+                        element={
+                            <ProtectedRoute>
+                                <Chat />
+                            </ProtectedRoute>
+                        }
+                    />
                     {/* product/1 */}
                     <Route path="/product/:id" element={<ProductDetailPage />} />
+                    <Route path="*" element={<CatchAllRedirect />} />
+
+                    {/* Catch-all — redirect based on role */}
                     <Route path="*" element={<CatchAllRedirect />} />
                 </Routes>
             </Router>
