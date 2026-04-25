@@ -1,39 +1,25 @@
 package com.tmdt.model;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDateTime;
-import java.util.UUID;
 
-@Entity
 @Data
-@Table(name = "reviews")
 public class Review {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
-    @Column(name = "reviewer_id", nullable = false)
-    private UUID reviewerId;
+    @JsonProperty("reviewer_id")
+    private String reviewerId;
 
-    @Column(name = "product_id", nullable = false)
-    private UUID productId;
+    @JsonProperty("product_id")
+    private String productId;
 
-    @Column(nullable = false)
     private Integer rating;
-
-    @Column(columnDefinition = "TEXT")
     private String comment;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @JsonProperty("created_at")
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    @JsonProperty("updated_at")
     private LocalDateTime updatedAt;
 }
