@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { Send, ArrowLeft, MessageSquare, User, Search, X } from 'lucide-react';
+import { Send, ArrowLeft, MessageSquare, User, Search, X, MapPin, StickyNote } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -281,6 +281,69 @@ const Chat = () => {
         setLoading(false);
     };
 
+    const handleShareLocation = async () => {
+        if (!user || !activeConv) return;
+
+        setLoading(true);
+        try {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const { latitude, longitude, accuracy } = position.coords;
+                        const locationLink = `https://www.google.com/maps/search/${latitude},${longitude}`;
+                        const locationMessage = locationLink;
+
+                        console.log(`Vị trí: ${latitude}, ${longitude} (Độ chính xác: ${accuracy}m)`);
+
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/messages`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    conversation_id: activeConv.id,
+                                    sender_id: user.id,
+                                    content: locationMessage,
+                                    message_type: 'location'
+                                })
+                            });
+
+                            if (!response.ok) {
+                                console.error('Lỗi gửi vị trí');
+                                alert('Không thể gửi vị trí. Vui lòng thử lại!');
+                            }
+                        } catch (error) {
+                            console.error('Lỗi gửi vị trí:', error);
+                            alert('Lỗi: ' + error.message);
+                        }
+                        setLoading(false);
+                    },
+                    (error) => {
+                        console.error('Lỗi lấy vị trí:', error);
+                        alert('Không thể lấy vị trí của bạn. Vui lòng kiểm tra quyền truy cập.');
+                        setLoading(false);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                alert('Trình duyệt không hỗ trợ geolocation.');
+                setLoading(false);
+            }
+        } catch (error) {
+            console.error('Lỗi:', error);
+            alert('Lỗi: ' + error.message);
+            setLoading(false);
+        }
+    };
+
+    const handleNote = () => {
+        // Placeholder for note functionality - will be implemented later
+        alert('Chức năng ghi chú sẽ được cập nhật sau!');
+    };
+
     const formatTime = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -397,6 +460,14 @@ const Chat = () => {
                                         <h4>{activeUser?.full_name}</h4>
                                     </div>
                                 </div>
+                                <div className="header-actions">
+                                    <button type="button" className="action-btn location-btn" onClick={handleShareLocation} disabled={loading} title="Chia sẻ vị trí">
+                                        <MapPin size={20} />
+                                    </button>
+                                    <button type="button" className="action-btn note-btn" onClick={handleNote} disabled={loading} title="Ghi chú">
+                                        <StickyNote size={20} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="messages-area">
@@ -408,7 +479,13 @@ const Chat = () => {
                                             animate={{ opacity: 1, scale: 1 }}
                                             className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
                                         >
-                                            <div>{msg.content}</div>
+                                            {msg.message_type === 'location' ? (
+                                                <a href={msg.content} target="_blank" rel="noopener noreferrer" className="location-link">
+                                                 Vị trí hiện tại
+                                                </a>
+                                            ) : (
+                                                <div>{msg.content}</div>
+                                            )}
                                             <span className="message-time">{formatTime(msg.created_at)}</span>
                                         </motion.div>
                                     ))}

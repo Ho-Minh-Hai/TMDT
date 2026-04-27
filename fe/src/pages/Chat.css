@@ -149,6 +149,12 @@
     gap: 1rem;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .status-dot {
     width: 8px;
     height: 8px;
@@ -198,6 +204,22 @@
     margin-top: 0.4rem;
     display: block;
     text-align: right;
+}
+
+.location-link {
+    display: inline-block;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.location-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
 }
 
 /* Chat Input */
@@ -256,6 +278,24 @@
     cursor: not-allowed;
     transform: none;
 }
+
+.action-btn {
+    width: 44px;
+    height: 44px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 
 .back-home {
     position: fixed;
