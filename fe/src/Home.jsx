@@ -6,7 +6,7 @@ import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, Arrow
 import { motion } from 'framer-motion';
 
 const Home = () => {
-    const { user, profile, userRole, signOut } = useAuth();
+    const { user, profile, signOut } = useAuth();
 
     const products = [
         { id: 1, name: 'Premium Cloud Watch', price: '$299', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80', rating: 4.8 },
@@ -18,7 +18,7 @@ const Home = () => {
     return (
         <div className="home-container">
             <div className="bg-mesh"></div>
-            
+
             <nav className="navbar">
                 <div className="logo">
                     <div className="logo-icon">
@@ -34,11 +34,7 @@ const Home = () => {
                     <Link to="/chat" className="nav-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Trò chuyện
                     </Link>
-                    {userRole === 'seller' ? (
-                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Quản lý bán hàng</Link>
-                    ) : (
-                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
-                    )}
+                    <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -58,7 +54,7 @@ const Home = () => {
                 >
                     <span className="badge">BST Xuân 2024</span>
                     <h1 className="hero-title">
-                        Nâng tầm <span className="hero-gradient">phong cách sống</span> <br /> 
+                        Nâng tầm <span className="hero-gradient">phong cách sống</span> <br />
                         kỹ thuật số của bạn
                     </h1>
                     <p className="hero-desc">
@@ -73,7 +69,7 @@ const Home = () => {
 
             <section className="grid-products">
                 {products.map((product, i) => (
-                    <motion.div 
+                    <motion.div
                         key={product.id}
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
