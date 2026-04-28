@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { Send, ArrowLeft, MessageSquare, User, Search, X } from 'lucide-react';
+import { Send, ArrowLeft, MessageSquare, User, Search, X, MapPin, StickyNote } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -21,6 +21,10 @@ const Chat = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [, setIsSearching] = useState(false);
+
+    const [showNoteModal, setShowNoteModal] = useState(false);
+    const [noteForm, setNoteForm] = useState({ title: '', content: '', deadline: '' });
+    const [pendingNotes, setPendingNotes] = useState([]);
 
     const messagesEndRef = useRef(null);
 
@@ -75,6 +79,49 @@ const Chat = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const fetchPendingNotes = async () => {
+        if (!user) return;
+        try {
+            const response = await fetch(`http://localhost:8080/api/notes/pending/${user.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setPendingNotes(data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching notes:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (!user) return;
+
+        fetchPendingNotes();
+
+        const interval = setInterval(fetchPendingNotes, 30000); // Refresh every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [user]);
+
+    // Auto-mark notes as done when deadline is reached
+    useEffect(() => {
+        if (pendingNotes.length === 0) return;
+
+        const checkOverdueNotes = async () => {
+            const now = new Date();
+            for (const note of pendingNotes) {
+                const deadline = new Date(note.deadline);
+                if (deadline <= now) {
+                    await handleMarkNoteDone(note.id);
+                }
+            }
+        };
+
+        const timer = setInterval(checkOverdueNotes, 60000); // Check every minute
+        checkOverdueNotes(); // Check immediately on load
+
+        return () => clearInterval(timer);
+    }, [pendingNotes]);
 
     useEffect(() => {
         if (!user) return;
@@ -281,6 +328,126 @@ const Chat = () => {
         setLoading(false);
     };
 
+    const handleShareLocation = async () => {
+        if (!user || !activeConv) return;
+
+        setLoading(true);
+        try {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const { latitude, longitude, accuracy } = position.coords;
+                        const locationLink = `https://www.google.com/maps/search/${latitude},${longitude}`;
+                        const locationMessage = locationLink;
+
+                        console.log(`Vị trí: ${latitude}, ${longitude} (Độ chính xác: ${accuracy}m)`);
+
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/messages`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    conversation_id: activeConv.id,
+                                    sender_id: user.id,
+                                    content: locationMessage,
+                                    message_type: 'location'
+                                })
+                            });
+
+                            if (!response.ok) {
+                                console.error('Lỗi gửi vị trí');
+                                alert('Không thể gửi vị trí. Vui lòng thử lại!');
+                            }
+                        } catch (error) {
+                            console.error('Lỗi gửi vị trí:', error);
+                            alert('Lỗi: ' + error.message);
+                        }
+                        setLoading(false);
+                    },
+                    (error) => {
+                        console.error('Lỗi lấy vị trí:', error);
+                        alert('Không thể lấy vị trí của bạn. Vui lòng kiểm tra quyền truy cập.');
+                        setLoading(false);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                alert('Trình duyệt không hỗ trợ geolocation.');
+                setLoading(false);
+            }
+        } catch (error) {
+            console.error('Lỗi:', error);
+            alert('Lỗi: ' + error.message);
+            setLoading(false);
+        }
+    };
+
+    const handleNote = () => {
+        setShowNoteModal(true);
+    };
+
+    const handleSaveNote = async () => {
+        if (!user || !noteForm.title.trim() || !noteForm.deadline) {
+            alert('Vui lòng nhập tiêu đề và chọn ngày + giờ cần làm!');
+            return;
+        }
+
+        try {
+            // Parse datetime-local string correctly
+            // Format: "2026-04-28T18:00"
+            const [datePart, timePart] = noteForm.deadline.split('T');
+            const [year, month, day] = datePart.split('-').map(Number);
+            const [hour, minute] = timePart.split(':').map(Number);
+
+            // Create date as LOCAL time, then convert to ISO string
+            const dateObj = new Date(year, month - 1, day, hour, minute, 0);
+            const isoString = dateObj.toISOString();
+
+
+            const response = await fetch('http://localhost:8080/api/notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    title: noteForm.title.trim(),
+                    content: noteForm.content.trim(),
+                    deadline: isoString,
+                    status: 'pending'
+                })
+            });
+
+            const responseData = await response.json();
+
+            if (response.ok) {
+                setShowNoteModal(false);
+                setNoteForm({ title: '', content: '', deadline: '' });
+                await fetchPendingNotes();
+            }
+        } catch (error) {
+            alert('Lỗi: ' + error.message);
+        }
+    };
+
+    const handleMarkNoteDone = async (noteId) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/notes/${noteId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'done' })
+            });
+
+            if (response.ok) {
+                await fetchPendingNotes();
+            }
+        } catch (error) {
+            console.error('Error updating note:', error);
+        }
+    };
+
     const formatTime = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -289,6 +456,105 @@ const Chat = () => {
     return (
         <div className="chat-page">
             <div className="bg-mesh"></div>
+            
+            {/* Notes Widget - Right Corner */}
+            {pendingNotes.length > 0 && (
+                <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="notes-widget"
+                >
+                    <div className="notes-header">
+                        <h3>Ghi chú ({pendingNotes.length})</h3>
+                    </div>
+                    <div className="notes-list">
+                        {pendingNotes.map((note) => (
+                            <div key={note.id} className="note-item">
+                                <div className="note-title">{note.title}</div>
+                                <div className="note-deadline">
+                                    {new Date(note.deadline).toLocaleString('vi-VN', { 
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </div>
+                                <button 
+                                    className="note-done-btn"
+                                    onClick={() => handleMarkNoteDone(note.id)}
+                                    title="Đánh dấu hoàn thành"
+                                >
+                                    ✓
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Note Modal */}
+            <AnimatePresence>
+                {showNoteModal && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="modal-overlay"
+                        onClick={() => setShowNoteModal(false)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="note-modal"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="modal-header">
+                                <h2>Thêm ghi chú</h2>
+                                <button 
+                                    className="close-btn"
+                                    onClick={() => setShowNoteModal(false)}
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="form-group">
+                                    <label>Tiêu đề *</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="Nhập tiêu đề ghi chú..."
+                                        value={noteForm.title}
+                                        onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Ngày cần làm *</label>
+                                    <input 
+                                        type="datetime-local"
+                                        value={noteForm.deadline}
+                                        onChange={(e) => setNoteForm({ ...noteForm, deadline: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button 
+                                    className="btn-cancel"
+                                    onClick={() => setShowNoteModal(false)}
+                                >
+                                    Hủy
+                                </button>
+                                <button 
+                                    className="btn-save"
+                                    onClick={handleSaveNote}
+                                >
+                                    Lưu ghi chú
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             
             <Link to="/home" className="back-home">
                 <ArrowLeft size={20} />
@@ -397,6 +663,14 @@ const Chat = () => {
                                         <h4>{activeUser?.full_name}</h4>
                                     </div>
                                 </div>
+                                <div className="header-actions">
+                                    <button type="button" className="action-btn location-btn" onClick={handleShareLocation} disabled={loading} title="Chia sẻ vị trí">
+                                        <MapPin size={20} />
+                                    </button>
+                                    <button type="button" className="action-btn note-btn" onClick={handleNote} disabled={loading} title="Ghi chú">
+                                        <StickyNote size={20} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="messages-area">
@@ -408,7 +682,13 @@ const Chat = () => {
                                             animate={{ opacity: 1, scale: 1 }}
                                             className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
                                         >
-                                            <div>{msg.content}</div>
+                                            {msg.message_type === 'location' ? (
+                                                <a href={msg.content} target="_blank" rel="noopener noreferrer" className="location-link">
+                                                 Vị trí hiện tại
+                                                </a>
+                                            ) : (
+                                                <div>{msg.content}</div>
+                                            )}
                                             <span className="message-time">{formatTime(msg.created_at)}</span>
                                         </motion.div>
                                     ))}
