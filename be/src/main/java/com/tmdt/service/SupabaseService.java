@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tmdt.model.Product;
 import com.tmdt.model.Conversation;
 import com.tmdt.model.Message;
+import com.tmdt.model.Note;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -335,6 +336,65 @@ public class SupabaseService {
         try {
             restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(objectMapper.writeValueAsString(body), headers), String.class);
         } catch (Exception ignored) {}
+    }
+
+    // ==================== NOTES ====================
+
+    public Note createNote(Map<String, Object> noteData) {
+        String url = supabaseUrl + "/rest/v1/notes";
+
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        try {
+            String body = objectMapper.writeValueAsString(noteData);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class
+            );
+
+            List<Note> notes = objectMapper.readValue(response.getBody(), new TypeReference<List<Note>>() {});
+            return notes.isEmpty() ? null : notes.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create note: " + e.getMessage(), e);
+        }
+    }
+
+    public List<Note> getPendingNotes(String userId) {
+        String url = supabaseUrl + "/rest/v1/notes?user_id=eq." + userId + "&status=eq.pending&order=deadline.asc";
+
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Note>>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch pending notes: " + e.getMessage(), e);
+        }
+    }
+
+    public Note updateNote(String noteId, Map<String, Object> noteData) {
+        String url = supabaseUrl + "/rest/v1/notes?id=eq." + noteId;
+
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        try {
+            String body = objectMapper.writeValueAsString(noteData);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PATCH, new HttpEntity<>(body, headers), String.class
+            );
+
+            List<Note> notes = objectMapper.readValue(response.getBody(), new TypeReference<List<Note>>() {});
+            return notes.isEmpty() ? null : notes.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update note: " + e.getMessage(), e);
+        }
     }
 
     // ==================== HELPERS ====================
