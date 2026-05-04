@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { Send, ArrowLeft, MessageSquare, User, Search, X, MapPin, StickyNote } from 'lucide-react';
+import { Send, MessageSquare, User, Search, X, MapPin, StickyNote, Home, ShoppingBag, History, Settings, Package, LogOut } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Chat.css';
 
 const Chat = () => {
-    const { user } = useAuth();
+    const { user, profile, signOut } = useAuth();
+    const navigate = useNavigate();
     const [conversations, setConversations] = useState([]);
     const [conversationUsers, setConversationUsers] = useState({});
+    const [conversationMessages, setConversationMessages] = useState({});
     const [activeConv, setActiveConv] = useState(null);
     const [activeUser, setActiveUser] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -133,16 +135,29 @@ const Chat = () => {
                 const convs = Array.isArray(data) ? data : [];
                 setConversations(convs);
 
-                // Fetch user info for each conversation
+                // Fetch user info and messages for each conversation
                 const userInfoMap = {};
+                const messagesMap = {};
                 for (const conv of convs) {
                     const otherUserId = getOtherUserId(conv);
                     const userInfo = await fetchUserInfo(otherUserId);
                     if (userInfo) {
                         userInfoMap[conv.id] = userInfo;
                     }
+                    // Fetch messages for preview
+                    try {
+                        const msgResponse = await fetch(`${API_BASE_URL}/messages/${conv.id}`);
+                        if (msgResponse.ok) {
+                            const msgs = await msgResponse.json();
+                            messagesMap[conv.id] = Array.isArray(msgs) ? msgs : [];
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching messages for conv ${conv.id}:`, error);
+                    }
                 }
                 setConversationUsers(userInfoMap);
+                setConversationMessages(messagesMap);
+                
                 // Fetch unread counts
                 if (convs.length > 0) {
                     const { data: unreadData, error: unreadError } = await supabase
@@ -182,11 +197,17 @@ const Chat = () => {
                     table: 'messages',
                 }, 
                 (payload) => {
+                    // Update messages map for preview
+                    setConversationMessages(prev => ({
+                        ...prev,
+                        [payload.new.conversation_id]: [
+                            ...(prev[payload.new.conversation_id] || []),
+                            payload.new
+                        ]
+                    }));
+                    
                     if (payload.new.sender_id !== user.id) {
                         setUnreadCounts(prev => {
-                            // If we are currently active on this conversation, do not increment (it will be marked read)
-                            // However, we don't have activeConv in this closure's dependency, so we just increment it.
-                            // The activeConv effect will mark it read anyway.
                             return {
                                 ...prev,
                                 [payload.new.conversation_id]: (prev[payload.new.conversation_id] || 0) + 1
@@ -233,7 +254,13 @@ const Chat = () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/messages/${activeConv.id}`);
                 const data = await response.json();
-                setMessages(Array.isArray(data) ? data : []);
+                const msgs = Array.isArray(data) ? data : [];
+                setMessages(msgs);
+                // Update conversation messages map too
+                setConversationMessages(prev => ({
+                    ...prev,
+                    [activeConv.id]: msgs
+                }));
                 // Mark messages as read after successfully fetching them
                 await markAsRead(activeConv.id);
             } catch (error) {
@@ -255,6 +282,11 @@ const Chat = () => {
                 }, 
                 (payload) => {
                     setMessages((prev) => [...prev, payload.new]);
+                    // Update conversation messages map
+                    setConversationMessages(prev => ({
+                        ...prev,
+                        [activeConv.id]: [...(prev[activeConv.id] || []), payload.new]
+                    }));
                     if (payload.new.sender_id !== user?.id) {
                         markAsRead(activeConv.id);
                     }
@@ -450,14 +482,69 @@ const Chat = () => {
 
     const formatTime = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        
+        if (isToday) {
+            return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            return date.toLocaleDateString('vi-VN', { month: '2-digit', day: '2-digit' });
+        }
     };
 
+    const getLastMessage = (convId) => {
+        return conversationMessages[convId]?.[conversationMessages[convId].length - 1];
+    };
+
+    const formatLastMessage = (msg) => {
+        if (!msg) return 'Không có tin nhắn';
+        if (msg.message_type === 'location') return '📍 Vị trí chia sẻ';
+        return msg.content.substring(0, 40) + (msg.content.length > 40 ? '...' : '');
+    };
+
+    const navItems = [
+        { icon: User, label: 'Profile', color: '#6366f1', onClick: () => navigate('/profile') },
+        { icon: ShoppingBag, label: 'My Listings', color: '#8b5cf6', onClick: () => navigate('/my-listings') },
+        { icon: History, label: 'Purchase History', color: '#ec4899', onClick: () => navigate('/history') },
+        { icon: MessageSquare, label: 'Messages', color: '#06b6d4', isActive: true },
+        { icon: Settings, label: 'Settings', color: '#f59e0b', onClick: () => navigate('/settings') }
+    ];
+
     return (
-        <div className="chat-page">
+        <div className="home-container">
             <div className="bg-mesh"></div>
             
-            {/* Notes Widget - Right Corner */}
+            <nav className="navbar">
+                <div className="logo">
+                    <div className="logo-icon">
+                        <ShoppingBag size={24} color="white" />
+                    </div>
+                    <span>Student<span style={{ color: 'var(--primary)' }}>Hub</span></span>
+                </div>
+
+                <div className="nav-links">
+                    <a href="#" className="nav-link">Bộ sưu tập</a>
+                    <a href="#" className="nav-link">Ưu đãi</a>
+                    <a href="#" className="nav-link">Xu hướng</a>
+                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
+                        <MessageSquare size={20} />
+                    </Link>
+                    <Link to="/seller" className="nav-icon-link" title="Shop">
+                        <Package size={20} />
+                    </Link>
+                </div>
+
+                <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <User size={18} />
+                    <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
+                    <button onClick={(e) => { e.preventDefault(); signOut(); }} className="auth-switch" style={{ marginLeft: '1rem' }}>
+                        <LogOut size={16} />
+                    </button>
+                </Link>
+            </nav>
+
+            <div className="chat-page">
+            {/* Notes Widget */}
             {pendingNotes.length > 0 && (
                 <motion.div 
                     initial={{ opacity: 0, x: 20 }}
@@ -555,169 +642,199 @@ const Chat = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            
-            <Link to="/home" className="back-home">
-                <ArrowLeft size={20} />
-                <span>Trang chủ</span>
-            </Link>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="chat-container">
-                <div className="chat-sidebar">
-                    <div className="sidebar-header">
-                        <div className="sidebar-title-row">
-                            <h2>Trò chuyện</h2>
-                        </div>
-                        
-                        <div className="chat-search-wrapper">
-                            <div className="chat-search-input">
-                                <input 
-                                    type="text" 
-                                    placeholder="Tìm kiếm bạn bè..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                {searchTerm && (
-                                    <button className="clear-search" onClick={() => setSearchTerm('')}>
-                                        <X size={14} />
-                                    </button>
-                                )}
-                            </div>
-
-                            <AnimatePresence>
-                                {searchResults.length > 0 && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 5 }}
-                                        className="search-results-popup"
-                                    >
-                                        <div className="search-results-label">Kết quả tìm kiếm</div>
-                                        {searchResults.map(u => (
-                                            <div key={u.id} className="search-result-item" onClick={() => handleStartChat(u)}>
-                                                <div className="result-avatar">
-                                                    {u.avatar_url ? (
-                                                        <img src={u.avatar_url} alt="" />
-                                                    ) : (
-                                                        <User size={16} />
-                                                    )}
-                                                </div>
-                                                <div className="result-info">
-                                                    <span className="result-name">{u.full_name}</span>
-                                                    <span className="result-status">Người dùng hệ thống</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
+            <div className="chat-wrapper">
+                {/* Left Sidebar - Navigation */}
+                <div className="chat-nav-sidebar">
+                    <div className="nav-header">
+                        <h1>Student Hub</h1>
+                        <p>MANAGE YOUR TRADES</p>
                     </div>
 
-                    <div className="user-list">
-                        {conversations.map(conv => {
-                            const convUser = conversationUsers[conv.id];
+                    <div className="nav-menu">
+                        {navItems.map((item) => {
+                            const Icon = item.icon;
                             return (
-                            <div 
-                                key={conv.id} 
-                                className={`user-item ${activeConv?.id === conv.id ? 'active' : ''}`}
-                                onClick={() => {
-                                    setActiveConv(conv);
-                                    setActiveUser(convUser);
-                                }}
-                            >
-                                <div className="user-avatar" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                    {convUser?.avatar_url ? (
-                                        <img src={convUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <User size={20} color={activeConv?.id === conv.id ? 'white' : 'var(--primary)'} />
-                                    )}
+                                <div 
+                                    key={item.label}
+                                    className={`nav-item ${item.isActive ? 'active' : ''}`}
+                                    onClick={item.onClick}
+                                >
+                                    <Icon size={20} style={{ color: item.color }} />
+                                    <span>{item.label}</span>
                                 </div>
-                                <div className="user-info">
-                                    <h4>{convUser?.full_name || 'User'}</h4>
-                                    <p>Nhấn để xem tin nhắn</p>
-                                </div>
-                                {unreadCounts[conv.id] > 0 && (
-                                    <div className="unread-badge">
-                                        {unreadCounts[conv.id]}
-                                    </div>
-                                )}
-                            </div>
                             );
                         })}
                     </div>
                 </div>
 
-                <div className="chat-main">
-                    {activeConv ? (
-                        <>
-                            <div className="chat-header">
-                                <div className="header-user">
-                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', marginRight: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)' }}>
-                                        {activeUser?.avatar_url ? (
-                                            <img src={activeUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <User size={20} />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h4>{activeUser?.full_name}</h4>
-                                    </div>
-                                </div>
-                                <div className="header-actions">
-                                    <button type="button" className="action-btn location-btn" onClick={handleShareLocation} disabled={loading} title="Chia sẻ vị trí">
-                                        <MapPin size={20} />
-                                    </button>
-                                    <button type="button" className="action-btn note-btn" onClick={handleNote} disabled={loading} title="Ghi chú">
-                                        <StickyNote size={20} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="messages-area">
-                                <AnimatePresence initial={false}>
-                                    {messages.map((msg, index) => (
-                                        <motion.div
-                                            key={msg.id || index}
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
-                                        >
-                                            {msg.message_type === 'location' ? (
-                                                <a href={msg.content} target="_blank" rel="noopener noreferrer" className="location-link">
-                                                 Vị trí hiện tại
-                                                </a>
-                                            ) : (
-                                                <div>{msg.content}</div>
-                                            )}
-                                            <span className="message-time">{formatTime(msg.created_at)}</span>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                                <div ref={messagesEndRef} />
-                            </div>
-
-                            <div className="chat-input-wrapper">
-                                <form onSubmit={handleSendMessage} className="chat-input-form">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Nhập tin nhắn..." 
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                    />
-                                    <button type="submit" className="send-btn" disabled={loading || !newMessage.trim()}>
-                                        <Send size={20} />
-                                    </button>
-                                </form>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="empty-chat-state">
-                            <MessageSquare size={64} style={{ opacity: 0.1 }} />
-                            <p>Chọn một cuộc trò chuyện hoặc tìm người dùng mới</p>
+                {/* Middle Column - Conversations List */}
+                <div className="conversations-panel">
+                    <div className="conversations-header">
+                        <h2>Messages</h2>
+                        <div className="conversations-search">
+                            <Search size={18} />
+                            <input 
+                                type="text" 
+                                placeholder="Search conversations..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchTerm && (
+                                <button className="clear-search" onClick={() => setSearchTerm('')}>
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
-                    )}
+                    </div>
+
+                    {/* Search Results or Conversations List */}
+                    <AnimatePresence>
+                        {searchResults.length > 0 ? (
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="search-results-list"
+                            >
+                                <div className="results-label">New conversations</div>
+                                {searchResults.map(u => (
+                                    <div key={u.id} className="conversation-item search-result-item" onClick={() => handleStartChat(u)}>
+                                        <div className="conversation-avatar">
+                                            {u.avatar_url ? (
+                                                <img src={u.avatar_url} alt="" />
+                                            ) : (
+                                                <User size={20} />
+                                            )}
+                                        </div>
+                                        <div className="conversation-info">
+                                            <div className="conversation-name">{u.full_name}</div>
+                                            <div className="conversation-status">Click to start chat</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        ) : (
+                            <div className="conversations-list">
+                                {conversations.length > 0 ? (
+                                    conversations.map(conv => {
+                                        const convUser = conversationUsers[conv.id];
+                                        const lastMsg = getLastMessage(conv.id);
+                                        return (
+                                            <motion.div 
+                                                key={conv.id}
+                                                whileHover={{ scale: 1.01 }}
+                                                className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setActiveConv(conv);
+                                                    setActiveUser(convUser);
+                                                }}
+                                            >
+                                                <div className="conversation-avatar">
+                                                    {convUser?.avatar_url ? (
+                                                        <img src={convUser.avatar_url} alt="" />
+                                                    ) : (
+                                                        <User size={20} />
+                                                    )}
+                                                </div>
+                                                <div className="conversation-info">
+                                                    <div className="conversation-header">
+                                                        <div className="conversation-name">{convUser?.full_name || 'User'}</div>
+                                                        <div className="conversation-time">{lastMsg ? formatTime(lastMsg.created_at) : ''}</div>
+                                                    </div>
+                                                    <div className="conversation-preview">
+                                                        {formatLastMessage(lastMsg)}
+                                                    </div>
+                                                </div>
+                                                {unreadCounts[conv.id] > 0 && (
+                                                    <div className="unread-badge">
+                                                        {unreadCounts[conv.id]}
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="empty-state">
+                                        <MessageSquare size={40} opacity={0.3} />
+                                        <p>No conversations yet</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </AnimatePresence>
                 </div>
-            </motion.div>
+
+                {/* Right Column - Chat View */}
+                {activeConv ? (
+                    <div className="chat-view-panel">
+                        <div className="chat-view-header">
+                            <div className="chat-view-user">
+                                <div className="chat-view-avatar">
+                                    {activeUser?.avatar_url ? (
+                                        <img src={activeUser.avatar_url} alt="" />
+                                    ) : (
+                                        <User size={24} />
+                                    )}
+                                </div>
+                                <h3>{activeUser?.full_name}</h3>
+                            </div>
+                            <div className="chat-view-actions">
+                                <button className="action-btn" onClick={handleShareLocation} disabled={loading} title="Share location">
+                                    <MapPin size={20} />
+                                </button>
+                                <button className="action-btn" onClick={handleNote} disabled={loading} title="Add note">
+                                    <StickyNote size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="messages-area">
+                            <AnimatePresence initial={false}>
+                                {messages.map((msg, index) => (
+                                    <motion.div
+                                        key={msg.id || index}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
+                                    >
+                                        {msg.message_type === 'location' ? (
+                                            <a href={msg.content} target="_blank" rel="noopener noreferrer" className="location-link">
+                                                📍 Location shared
+                                            </a>
+                                        ) : (
+                                            <>{msg.content}</>
+                                        )}
+                                        <span className="message-time">{formatTime(msg.created_at)}</span>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        <div className="chat-input-area">
+                            <form onSubmit={handleSendMessage} className="chat-input-form">
+                                <input 
+                                    type="text" 
+                                    placeholder="Type a message..." 
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    disabled={loading}
+                                />
+                                <button type="submit" className="send-btn" disabled={loading || !newMessage.trim()}>
+                                    <Send size={20} />
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="empty-chat-state">
+                        <MessageSquare size={64} opacity={0.2} />
+                        <p>Select a conversation or search for users to start chatting</p>
+                    </div>
+                )}
+            </div>
+            </div>
         </div>
     );
 };
