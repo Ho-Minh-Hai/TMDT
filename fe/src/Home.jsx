@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare } from 'lucide-react';
+import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare, Package, ChevronRight } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const Home = () => {
     const { user, profile, userRole, signOut } = useAuth();
+    const [selectedCategory, setSelectedCategory] = useState('all');
+
+    const categories = [
+        { id: 'all', name: 'Tất cả', icon: '📦' },
+        { id: 'electronics', name: 'Điện tử & Máy tính', icon: '💻' },
+        { id: 'fashion', name: 'Thời trang', icon: '👕' },
+        { id: 'home', name: 'Nhà & Ngoài trời', icon: '🏠' },
+        { id: 'sports', name: 'Thể thao & Ngoài trời', icon: '⚽' },
+    ];
 
     const products = [
-        { id: 1, name: 'Premium Cloud Watch', price: '$299', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80', rating: 4.8 },
-        { id: 2, name: 'Sleek Noise Headphones', price: '$199', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=80', rating: 4.9 },
-        { id: 3, name: 'Minimalist Camera', price: '$899', image: 'https://images.unsplash.com/photo-1526170315876-db60ba51947a?auto=format&fit=crop&w=400&q=80', rating: 4.7 },
-        { id: 4, name: 'Smart Home Speaker', price: '$149', image: 'https://images.unsplash.com/photo-1589492477829-5e65395b66cc?auto=format&fit=crop&w=400&q=80', rating: 4.6 },
+        { id: 1, name: 'Máy Đọc Sách Kỹ Thuật Số', price: '$299', seller: 'Hải bán rẻ', image: 'https://images.unsplash.com/photo-1589998059171-988d887df646?auto=format&fit=crop&w=800&q=80', rating: 4.8 },
+        { id: 2, name: 'Sách Kỹ Năng Tiếp Cận', price: '$199', seller: 'Hải bán cái khác', image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=500&q=80', rating: 4.9 },
+        { id: 3, name: 'Xe Đạp Công Nghệ Cao', price: '$899', seller: 'Hải bán mắc', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=500&q=80', rating: 4.7 },
+        { id: 4, name: 'Loa Thông Minh', price: '$149', seller: 'Hải bán hàng giả', image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=500&q=80', rating: 4.6 },
+        { id: 5, name: 'Bàn Phím Cơ Cao Cấp', price: '$249', seller: 'Hải bán ế', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80', rating: 4.8 },
+        { id: 6, name: 'Màn Hình 4K', price: '$599', seller: 'Hải không bán', image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=500&q=80', rating: 4.9 },
     ];
 
     return (
@@ -24,21 +35,19 @@ const Home = () => {
                     <div className="logo-icon">
                         <ShoppingBag size={24} color="white" />
                     </div>
-                    <span>N5<span style={{ color: 'var(--primary)' }}>STORE</span></span>
+                    <span>Student<span style={{ color: 'var(--primary)' }}>Hub</span></span>
                 </div>
 
                 <div className="nav-links">
                     <a href="#" className="nav-link">Bộ sưu tập</a>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/chat" className="nav-link" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        Trò chuyện
+                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
+                        <MessageSquare size={20} />
                     </Link>
-                    {userRole === 'seller' ? (
-                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Quản lý bán hàng</Link>
-                    ) : (
-                        <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
-                    )}
+                    <Link to="/seller" className="nav-icon-link" title="Shop">
+                        <Package size={20} />
+                    </Link>
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -50,56 +59,135 @@ const Home = () => {
                 </Link>
             </nav>
 
-            <header className="hero">
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 1 }}
-                >
-                    <span className="badge">BST Xuân 2024</span>
-                    <h1 className="hero-title">
-                        Nâng tầm <span className="hero-gradient">phong cách sống</span> <br /> 
-                        kỹ thuật số của bạn
-                    </h1>
-                    <p className="hero-desc">
-                        Tuyển tập những thiết bị công nghệ đỉnh cao được thiết kế để hoàn thiện không gian sống và phong thái của bạn.
-                    </p>
-                    <div className="flex-center" style={{ gap: '1.5rem' }}>
-                        <button className="btn-auth" style={{ padding: '1.25rem 2.5rem' }}>Bắt đầu mua sắm</button>
-                        <button className="auth-switch" style={{ padding: '1.25rem 2.5rem', border: '1px solid var(--border-glass)', borderRadius: '16px' }}>Xem danh mục</button>
+            <div className="home-main">
+                {/* Sidebar */}
+                <aside className="home-sidebar">
+                    <div className="sidebar-section">
+                        <h3 className="sidebar-title">QUẢN LÝ TÀI KHOẢN</h3>
+                        <ul className="sidebar-menu">
+                            <li><Link to="/profile" className="sidebar-item">👤 Hồ sơ cá nhân</Link></li>
+                            <li><a href="#" className="sidebar-item">📋 Danh sách yêu thích</a></li>
+                            <li><a href="#" className="sidebar-item">⏱️ Lịch sử mua hàng</a></li>
+                        </ul>
                     </div>
-                </motion.div>
-            </header>
 
-            <section className="grid-products">
-                {products.map((product, i) => (
-                    <motion.div 
-                        key={product.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="product-card"
-                    >
-                        <div className="product-img-wrapper">
-                            <img src={product.image} alt={product.name} className="product-img" />
-                        </div>
-                        <h3 className="product-name">{product.name}</h3>
-                        <p className="product-price">{product.price}</p>
-                        <div className="flex-center" style={{ justifyContent: 'space-between', marginTop: '1.5rem' }}>
-                            <div className="flex-center" style={{ gap: '0.4rem', color: '#fbbf24' }}>
-                                <Star size={14} fill="#fbbf24" />
-                                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'white' }}>{product.rating}</span>
+                    <div className="sidebar-section">
+                        <h3 className="sidebar-title">DANH MỤC</h3>
+                        <ul className="sidebar-menu">
+                            {categories.map(cat => (
+                                <li key={cat.id}>
+                                    <button 
+                                        className={`sidebar-item ${selectedCategory === cat.id ? 'active' : ''}`}
+                                        onClick={() => setSelectedCategory(cat.id)}
+                                    >
+                                        {cat.icon} {cat.name}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="sidebar-section">
+                        <h3 className="sidebar-title">LỌC GIÁ</h3>
+                        <div className="price-range">
+                            <input type="range" min="0" max="1000" className="price-slider" />
+                            <div className="price-inputs">
+                                <input type="number" placeholder="Min" className="price-input" />
+                                <span>-</span>
+                                <input type="number" placeholder="Max" className="price-input" />
                             </div>
-                            <button className="btn-auth" style={{ padding: '0.6rem 1rem', fontSize: '0.8rem', marginTop: 0 }}>
-                                <ShoppingBag size={14} />
-                            </button>
                         </div>
-                    </motion.div>
-                ))}
-            </section>
+                    </div>
+
+                    <div className="sidebar-section">
+                        <h3 className="sidebar-title">TÌM KIẾM</h3>
+                        <div className="search-box">
+                            <Search size={18} />
+                            <input type="text" placeholder="Tìm sản phẩm..." className="search-input" />
+                        </div>
+                    </div>
+                </aside>
+
+                {/* Main Content */}
+                <main className="home-content">
+                    <header className="hero">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 1 }}
+                            className="hero-inner"
+                        >
+                            <h1 className="hero-title">
+                                Nâng cấp đời sình <br />
+                                viên cùng <span className="hero-gradient">UnixShop</span>
+                            </h1>
+                            <p className="hero-desc">
+                                Khám phá những sản phẩm chất lượng cao từ các nhà bán hàng uy tín
+                            </p>
+                            <div className="hero-buttons">
+                                <button className="btn-primary">Bắt đầu mua sắm</button>
+                                <button className="btn-secondary">Xem danh mục</button>
+                            </div>
+                        </motion.div>
+                        <motion.div 
+                            initial={{ opacity: 0, x: 30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 1 }}
+                            className="hero-image"
+                        >
+                            <div className="hero-placeholder" style={{
+                                backgroundImage: 'url(https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=500&q=80)',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                            }}></div>
+                        </motion.div>
+                    </header>
+
+                    <section className="products-section">
+                        <div className="section-header">
+                            <h2>Tìm đảo mới nhất</h2>
+                            <a href="#" className="view-all">Xem tất cả <ChevronRight size={16} /></a>
+                        </div>
+
+                        <div className="products-grid">
+                            {products.map((product, i) => (
+                                <motion.div 
+                                    key={product.id}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    className="product-card-new"
+                                    style={{
+                                        backgroundImage: `url(${product.image})`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                    }}
+                                >
+                                    <div className="product-overlay"></div>
+                                    <div className="product-content">
+                                        <h3 className="product-title">{product.name}</h3>
+                                        <p className="product-seller">Bởi {product.seller}</p>
+                                        <div className="product-footer">
+                                            <div className="product-rating">
+                                                <Star size={14} fill="#fbbf24" color="#fbbf24" />
+                                                <span>{product.rating}</span>
+                                            </div>
+                                            <div className="product-price-new">{product.price}</div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        <div className="view-more-container">
+                            <button className="btn-view-more">Xem thêm các giấy</button>
+                        </div>
+                    </section>
+                </main>
+            </div>
 
             <footer style={{ marginTop: '6rem', paddingBottom: '3rem', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                <p>&copy; 2024 LUXESTORE. Thiết kế bởi Supabase & React CSS.</p>
+                <p>&copy; 2024 StudentHub. Tất cả quyền được bảo lưu.</p>
             </footer>
         </div>
     );

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Calendar, Camera, Save, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { User, Mail, Phone, Calendar, Camera, Save, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, MessageSquare, Package, LogOut } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import './Profile.css';
 
 const Profile = () => {
-    const { user, profile, updateProfile } = useAuth();
+    const { user, profile, updateProfile, signOut } = useAuth();
     const navigate = useNavigate();
     
     const [formData, setFormData] = useState({
@@ -127,6 +127,35 @@ const Profile = () => {
     return (
         <div className="profile-page">
             <div className="bg-mesh"></div>
+            
+            <nav className="navbar">
+                <div className="logo">
+                    <div className="logo-icon">
+                        <ShoppingBag size={24} color="white" />
+                    </div>
+                    <span>Student<span style={{ color: 'var(--primary)' }}>Hub</span></span>
+                </div>
+
+                <div className="nav-links">
+                    <a href="#" className="nav-link">Bộ sưu tập</a>
+                    <a href="#" className="nav-link">Ưu đãi</a>
+                    <a href="#" className="nav-link">Xu hướng</a>
+                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
+                        <MessageSquare size={20} />
+                    </Link>
+                    <Link to="/seller" className="nav-icon-link" title="Shop">
+                        <Package size={20} />
+                    </Link>
+                </div>
+
+                <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <User size={18} />
+                    <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
+                    <button onClick={(e) => { e.preventDefault(); signOut(); }} className="auth-switch" style={{ marginLeft: '1rem' }}>
+                        <LogOut size={16} />
+                    </button>
+                </Link>
+            </nav>
             
             <div className="profile-container">
                 <motion.button 
