@@ -42,14 +42,18 @@ const SellerLayout = () => {
             {/* Sidebar */}
             <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="sidebar-logo">
+                    <button 
+                        className="sidebar-logo"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+                        onClick={() => navigate('/home')}
+                    >
                         <div className="sidebar-logo-icon">
                             <ShoppingBag size={22} color="white" />
                         </div>
                         <span className="sidebar-logo-text">
                             Student<span className="sidebar-logo-accent">Market</span>
                         </span>
-                    </div>
+                    </button>
                     <button
                         className="sidebar-close-btn"
                         onClick={() => setSidebarOpen(false)}

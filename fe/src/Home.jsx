@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { supabase } from './supabaseClient';
 import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare, Package, ChevronRight } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const Home = () => {
     const { user, profile, userRole, signOut } = useAuth();
+    const navigate = useNavigate();
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [products, setProducts] = useState([]);
+    const [sellerProfiles, setSellerProfiles] = useState({});
+    const [loading, setLoading] = useState(true);
 
     const categories = [
         { id: 'all', name: 'Tất cả', icon: '📦' },
@@ -17,29 +22,62 @@ const Home = () => {
         { id: 'sports', name: 'Thể thao & Ngoài trời', icon: '⚽' },
     ];
 
-    const products = [
-        { id: 1, name: 'Máy Đọc Sách Kỹ Thuật Số', price: '$299', seller: 'Hải bán rẻ', image: 'https://images.unsplash.com/photo-1589998059171-988d887df646?auto=format&fit=crop&w=800&q=80', rating: 4.8 },
-        { id: 2, name: 'Sách Kỹ Năng Tiếp Cận', price: '$199', seller: 'Hải bán cái khác', image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=500&q=80', rating: 4.9 },
-        { id: 3, name: 'Xe Đạp Công Nghệ Cao', price: '$899', seller: 'Hải bán mắc', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=500&q=80', rating: 4.7 },
-        { id: 4, name: 'Loa Thông Minh', price: '$149', seller: 'Hải bán hàng giả', image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=500&q=80', rating: 4.6 },
-        { id: 5, name: 'Bàn Phím Cơ Cao Cấp', price: '$249', seller: 'Hải bán ế', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80', rating: 4.8 },
-        { id: 6, name: 'Màn Hình 4K', price: '$599', seller: 'Hải không bán', image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=500&q=80', rating: 4.9 },
-    ];
+    // Fetch 6 latest products from Supabase
+    useEffect(() => {
+        const fetchProducts = async () => {
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('status', 'available')
+                    .order('created_at', { ascending: false })
+                    .limit(6);
+
+                if (error) throw error;
+
+                setProducts(data || []);
+
+                // Fetch seller profiles for all unique seller IDs
+                const sellerIds = [...new Set((data || []).map(p => p.seller_id).filter(Boolean))];
+                if (sellerIds.length > 0) {
+                    const { data: profiles } = await supabase
+                        .from('profiles')
+                        .select('id, full_name, avatar_url')
+                        .in('id', sellerIds);
+
+                    const profileMap = {};
+                    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+                    setSellerProfiles(profileMap);
+                }
+            } catch (err) {
+                console.error('Error fetching products:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     return (
         <div className="home-container">
             <div className="bg-mesh"></div>
 
             <nav className="navbar">
-                <div className="logo">
+                <button 
+                    className="logo" 
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    onClick={() => navigate('/home')}
+                >
                     <div className="logo-icon">
                         <ShoppingBag size={24} color="white" />
                     </div>
                     <span>Student<span style={{ color: 'var(--primary)' }}>Hub</span></span>
-                </div>
+                </button>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
+                    <Link to="/shop" className="nav-link">Shop</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
@@ -159,7 +197,7 @@ const Home = () => {
                                     transition={{ delay: i * 0.1 }}
                                     className="product-card-new"
                                     style={{
-                                        backgroundImage: `url(${product.image})`,
+                                        backgroundImage: `url(${product.image_url || product.image})`,
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center',
                                     }}
@@ -167,13 +205,17 @@ const Home = () => {
                                     <div className="product-overlay"></div>
                                     <div className="product-content">
                                         <h3 className="product-title">{product.name}</h3>
-                                        <p className="product-seller">Bởi {product.seller}</p>
+                                        <p className="product-seller">
+                                            Bởi {sellerProfiles[product.seller_id]?.full_name || 'Người bán'}
+                                        </p>
                                         <div className="product-footer">
                                             <div className="product-rating">
                                                 <Star size={14} fill="#fbbf24" color="#fbbf24" />
-                                                <span>{product.rating}</span>
+                                                <span>{product.rating || 4.8}</span>
                                             </div>
-                                            <div className="product-price-new">{product.price}</div>
+                                            <div className="product-price-new">
+                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price || 0)}
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
