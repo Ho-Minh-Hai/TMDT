@@ -196,7 +196,6 @@ const Shop = () => {
                     <Link to="/seller" className="nav-icon-link" title="Shop">
                         <Package size={20} />
                     </Link>
-                    <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -388,6 +387,7 @@ const Shop = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: Math.min(i * 0.05, 0.5) }}
                                         className="shop-card"
+                                        onClick={() => navigate(`/product/${product.id}`)}
                                         onMouseEnter={() => setHoveredProduct(product.id)}
                                         onMouseLeave={() => setHoveredProduct(null)}
                                     >

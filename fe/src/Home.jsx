@@ -48,7 +48,7 @@ const Home = () => {
                     <Link to="/seller" className="nav-icon-link" title="Shop">
                         <Package size={20} />
                     </Link>
-                    <Link to="/seller" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Đăng bán</Link>
+
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -77,7 +77,7 @@ const Home = () => {
                         <ul className="sidebar-menu">
                             {categories.map(cat => (
                                 <li key={cat.id}>
-                                    <button 
+                                    <button
                                         className={`sidebar-item ${selectedCategory === cat.id ? 'active' : ''}`}
                                         onClick={() => setSelectedCategory(cat.id)}
                                     >
@@ -130,7 +130,7 @@ const Home = () => {
                                 <Link to="/shop" className="btn-secondary" style={{ textDecoration: 'none' }}>Xem danh mục</Link>
                             </div>
                         </motion.div>
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, x: 30 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 1 }}
@@ -152,7 +152,7 @@ const Home = () => {
 
                         <div className="products-grid">
                             {products.map((product, i) => (
-                                <motion.div 
+                                <motion.div
                                     key={product.id}
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     whileInView={{ opacity: 1, scale: 1 }}

@@ -523,7 +523,7 @@ const Chat = () => {
                 </div>
 
                 <div className="nav-links">
-                    <a href="#" className="nav-link">Bộ sưu tập</a>
+                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
