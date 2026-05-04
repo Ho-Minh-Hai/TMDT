@@ -65,4 +65,42 @@ public class ReviewController {
             return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
         }
     }
+    // API Xóa đánh giá
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<?> deleteReview(@PathVariable String reviewId, @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Chưa đăng nhập");
+
+        Review review = supabaseService.getReviewById(reviewId);
+        if (review == null) return ResponseEntity.notFound().build();
+        if (!review.getReviewerId().equals(principal.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền xóa đánh giá của người khác");
+        }
+
+        supabaseService.deleteReview(reviewId);
+        return ResponseEntity.ok("Xóa thành công");
+    }
+
+    // API Sửa đánh giá
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<?> updateReview(
+            @PathVariable String reviewId,
+            @RequestBody ReviewRequestDTO dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Chưa đăng nhập");
+
+        Review review = supabaseService.getReviewById(reviewId);
+        if (review == null) return ResponseEntity.notFound().build();
+        if (!review.getReviewerId().equals(principal.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền sửa đánh giá này");
+        }
+
+        Map<String, Object> updateData = new HashMap<>();
+        updateData.put("rating", dto.getRating());
+        updateData.put("comment", dto.getComment());
+        updateData.put("media_url", dto.getMediaUrl());
+        updateData.put("updated_at", java.time.OffsetDateTime.now().toString());
+
+        return ResponseEntity.ok(supabaseService.updateReview(reviewId, updateData));
+    }
 }

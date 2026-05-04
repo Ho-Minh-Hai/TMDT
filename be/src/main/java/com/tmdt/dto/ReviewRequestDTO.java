@@ -8,4 +8,5 @@ public class ReviewRequestDTO {
     private String productId; 
     private Integer rating;
     private String comment;
+    private String mediaUrl;
 }

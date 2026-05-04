@@ -1,11 +1,14 @@
 package com.tmdt.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Review {
+
     private String id;
 
     @JsonProperty("reviewer_id")
@@ -18,8 +21,10 @@ public class Review {
     private String comment;
 
     @JsonProperty("created_at")
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @JsonProperty("updated_at")
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
+    @JsonProperty("media_url")
+    private String mediaUrl;
 }
