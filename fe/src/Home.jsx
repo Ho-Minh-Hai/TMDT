@@ -39,7 +39,7 @@ const Home = () => {
                 </div>
 
                 <div className="nav-links">
-                    <a href="#" className="nav-link">Bộ sưu tập</a>
+                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
@@ -126,8 +126,8 @@ const Home = () => {
                                 Khám phá những sản phẩm chất lượng cao từ các nhà bán hàng uy tín
                             </p>
                             <div className="hero-buttons">
-                                <button className="btn-primary">Bắt đầu mua sắm</button>
-                                <button className="btn-secondary">Xem danh mục</button>
+                                <Link to="/shop" className="btn-primary" style={{ textDecoration: 'none' }}>Bắt đầu mua sắm</Link>
+                                <Link to="/shop" className="btn-secondary" style={{ textDecoration: 'none' }}>Xem danh mục</Link>
                             </div>
                         </motion.div>
                         <motion.div 
@@ -147,7 +147,7 @@ const Home = () => {
                     <section className="products-section">
                         <div className="section-header">
                             <h2>Sản phẩm mới nhất</h2>
-                            <a href="#" className="view-all">Xem tất cả <ChevronRight size={16} /></a>
+                            <Link to="/shop" className="view-all">Xem tất cả <ChevronRight size={16} /></Link>
                         </div>
 
                         <div className="products-grid">
@@ -181,7 +181,7 @@ const Home = () => {
                         </div>
 
                         <div className="view-more-container">
-                            <button className="btn-view-more">Xem thêm sản phẩm</button>
+                            <Link to="/shop" className="btn-view-more" style={{ textDecoration: 'none' }}>Xem thêm sản phẩm</Link>
                         </div>
                     </section>
                 </main>

@@ -9,6 +9,7 @@ import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
+import Shop from './pages/Shop';
 
 /**
  * Protects routes that require authentication.
@@ -100,6 +101,16 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <Chat />
+                            </ProtectedRoute>
+                        } 
+                    />
+
+                    {/* Shop page — browse all products */}
+                    <Route 
+                        path="/shop" 
+                        element={
+                            <ProtectedRoute>
+                                <Shop />
                             </ProtectedRoute>
                         } 
                     />
