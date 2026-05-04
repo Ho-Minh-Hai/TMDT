@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +10,9 @@ const Auth = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [successMsg, setSuccessMsg] = useState(null);
-    const { signIn, signUp } = useAuth();
+    
+    const { signIn, signUp, fetchProfile } = useAuth(); 
+    const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         email: '',
@@ -25,27 +28,47 @@ const Auth = () => {
 
         try {
             if (isLogin) {
-                const { error } = await signIn({
+                // Xử lý đăng nhập
+                const { data, error } = await signIn({
                     email: formData.email,
                     password: formData.password,
                 });
+                
                 if (error) throw error;
+
+                // Kiểm tra Role ngay lập tức để chuyển hướng mượt mà
+                if (data?.user) {
+                    const userProfile = await fetchProfile(data.user.id);
+                    if (userProfile?.role === 'admin') {
+                        navigate('/admin'); // Role admin -> Chuyển sang Dashboard Admin
+                    } else {
+                        navigate('/home'); // Role user -> Chuyển sang trang Home (đồng bộ với App.jsx)
+                    }
+                }
             } else {
+                // Xử lý đăng ký
                 const { error } = await signUp({
                     email: formData.email,
                     password: formData.password,
                     options: {
                         data: {
                             full_name: formData.username,
+                            role: 'user', // Mặc định tài khoản mới là user thường
                         },
                         emailRedirectTo: window.location.origin
                     }
                 });
+                
                 if (error) throw error;
                 setSuccessMsg('Vui lòng kiểm tra email của bạn để xác nhận đăng ký! Một đường link xác nhận đã được gửi đi.');
             }
         } catch (err) {
-            setError(err.message);
+            // Tùy chỉnh thông báo lỗi cho thân thiện hơn
+            if (err.message.includes('Invalid login credentials')) {
+                setError('Email hoặc mật khẩu không chính xác.');
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
