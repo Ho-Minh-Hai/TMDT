@@ -1,7 +1,7 @@
 .profile-page {
     min-height: 100vh;
-    color: white;
-    padding: 2rem;
+    color: #111827;
+    padding-top: 0;
     position: relative;
     overflow-x: hidden;
 }
@@ -11,6 +11,7 @@
     margin: 0 auto;
     position: relative;
     z-index: 1;
+    padding-top: 2rem;
 }
 
 .back-btn {
@@ -19,7 +20,7 @@
     gap: 0.5rem;
     background: none;
     border: none;
-    color: var(--text-dim);
+    color: #6b7280;
     cursor: pointer;
     margin-bottom: 2rem;
     font-weight: 500;
@@ -27,16 +28,16 @@
 }
 
 .back-btn:hover {
-    color: white;
+    color: var(--primary);
 }
 
 .profile-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: #ffffff;
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid #e5e7eb;
     border-radius: 24px;
     padding: 3rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .profile-header {
@@ -111,9 +112,8 @@
 .profile-title-section h1 {
     font-size: 2rem;
     margin: 0;
-    background: linear-gradient(to right, #fff, #a5b4fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #111827;
+    font-weight: 700;
 }
 
 .profile-role {
@@ -123,9 +123,9 @@
 }
 
 .edit-toggle-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #111827;
     padding: 0.75rem 1.5rem;
     border-radius: 12px;
     cursor: pointer;
@@ -134,8 +134,8 @@
 }
 
 .edit-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: #e5e7eb;
+    border-color: #d1d5db;
 }
 
 .message-banner {
@@ -186,11 +186,11 @@
 }
 
 .form-group input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 0.85rem 1rem;
-    color: white;
+    color: #111827;
     font-size: 1rem;
     transition: all 0.3s;
 }
@@ -198,7 +198,7 @@
 .form-group input:focus {
     outline: none;
     border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.08);
+    background: #ffffff;
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
@@ -208,12 +208,13 @@
 }
 
 .disabled-input {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: #e5e7eb !important;
+    color: #6b7280 !important;
 }
 
 .input-hint {
     font-size: 0.75rem;
-    color: #666;
+    color: #6b7280;
     margin-top: 0.25rem;
 }
 
@@ -225,9 +226,9 @@
 }
 
 .cancel-btn {
-    background: none;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #111827;
     padding: 0.75rem 2rem;
     border-radius: 12px;
     cursor: pointer;
@@ -235,7 +236,7 @@
 }
 
 .cancel-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #e5e7eb;
 }
 
 .save-btn {

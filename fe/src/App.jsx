@@ -9,7 +9,8 @@ import ProductList from './pages/ProductList';
 import ProductForm from './pages/ProductForm';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
-import ProductDetailPage from "./pages/ProductDetail.jsx";
+import Shop from './pages/Shop';
+import ProductDetail from './pages/ProductDetail';
 
 /**
  * Protects routes that require authentication.
@@ -87,32 +88,42 @@ function App() {
                     </Route>
 
                     {/* Profile page */}
-                    <Route
-                        path="/profile"
+                    <Route 
+                        path="/profile" 
                         element={
                             <ProtectedRoute>
                                 <Profile />
                             </ProtectedRoute>
-                        }
+                        } 
                     />
 
-                    <Route
-                        path="/chat"
+                    <Route 
+                        path="/chat" 
                         element={
                             <ProtectedRoute>
                                 <Chat />
                             </ProtectedRoute>
-                        }
+                        } 
                     />
 
-                    {/* product/1 */}
-                    <Route
-                        path="/product/:id"
+                    {/* Shop page — browse all products */}
+                    <Route 
+                        path="/shop" 
                         element={
                             <ProtectedRoute>
-                                <ProductDetailPage />
+                                <Shop />
                             </ProtectedRoute>
-                    }
+                        } 
+                    />
+
+                    {/* Product detail page */}
+                    <Route 
+                        path="/product/:id" 
+                        element={
+                            <ProtectedRoute>
+                                <ProductDetail />
+                            </ProtectedRoute>
+                        } 
                     />
 
                     {/* Catch-all — redirect based on role */}
