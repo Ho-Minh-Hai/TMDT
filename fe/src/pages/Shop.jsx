@@ -47,6 +47,8 @@ const Shop = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedCondition, setSelectedCondition] = useState('all');
+    const [selectedLocation, setSelectedLocation] = useState('all');
+    const [locationSearchTerm, setLocationSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('newest');
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
     const [showFilters, setShowFilters] = useState(false);
@@ -116,6 +118,11 @@ const Shop = () => {
             result = result.filter(p => p.condition === selectedCondition);
         }
 
+        // Location filter
+        if (selectedLocation !== 'all') {
+            result = result.filter(p => p.location === selectedLocation);
+        }
+
         // Price range filter
         if (priceRange.min) {
             result = result.filter(p => p.price >= parseFloat(priceRange.min));
@@ -142,7 +149,7 @@ const Shop = () => {
         }
 
         setFilteredProducts(result);
-    }, [products, searchTerm, selectedCategory, selectedCondition, sortBy, priceRange]);
+    }, [products, searchTerm, selectedCategory, selectedCondition, selectedLocation, sortBy, priceRange]);
 
     const formatPrice = (price) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
@@ -167,11 +174,13 @@ const Shop = () => {
         setSearchTerm('');
         setSelectedCategory('all');
         setSelectedCondition('all');
+        setSelectedLocation('all');
+        setLocationSearchTerm('');
         setSortBy('newest');
         setPriceRange({ min: '', max: '' });
     };
 
-    const hasActiveFilters = selectedCategory !== 'all' || selectedCondition !== 'all' || priceRange.min || priceRange.max;
+    const hasActiveFilters = selectedCategory !== 'all' || selectedCondition !== 'all' || selectedLocation !== 'all' || priceRange.min || priceRange.max;
 
     return (
         <div className="shop-page">
@@ -288,6 +297,41 @@ const Shop = () => {
                                     onClick={() => setSelectedCondition(key)}
                                 >
                                     {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="filter-section">
+                        <h4 className="filter-title">Khu vực</h4>
+                        <div className="location-search-input" style={{ marginBottom: '10px' }}>
+                            <input 
+                                type="text" 
+                                placeholder="Tìm khu vực..." 
+                                value={locationSearchTerm}
+                                onChange={e => setLocationSearchTerm(e.target.value)}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '8px 12px', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid var(--border-glass)', 
+                                    fontSize: '0.85rem',
+                                    outline: 'none',
+                                    background: 'rgba(255, 255, 255, 0.5)'
+                                }}
+                            />
+                        </div>
+                        <div className="filter-options" style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                            {['all', ...new Set(products.map(p => p.location).filter(Boolean))]
+                                .filter(loc => loc === 'all' || loc.toLowerCase().includes(locationSearchTerm.toLowerCase()))
+                                .map(loc => (
+                                <button
+                                    key={loc}
+                                    className={`filter-chip ${selectedLocation === loc ? 'active' : ''}`}
+                                    onClick={() => setSelectedLocation(loc)}
+                                >
+                                    {loc === 'all' ? 'Tất cả' : loc}
                                 </button>
                             ))}
                         </div>
