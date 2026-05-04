@@ -11,3 +11,5 @@ be/.classpath/
 *.log
 .idea/
 be/.env
+.agent
+.planning

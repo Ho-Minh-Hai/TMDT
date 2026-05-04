@@ -29,7 +29,7 @@ const Home = () => {
     return (
         <div className="home-container">
             <div className="bg-mesh"></div>
-            
+
             <nav className="navbar">
                 <div className="logo">
                     <div className="logo-icon">
@@ -39,7 +39,7 @@ const Home = () => {
                 </div>
 
                 <div className="nav-links">
-                    <a href="#" className="nav-link">Bộ sưu tập</a>
+                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
@@ -48,6 +48,7 @@ const Home = () => {
                     <Link to="/seller" className="nav-icon-link" title="Shop">
                         <Package size={20} />
                     </Link>
+
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -76,7 +77,7 @@ const Home = () => {
                         <ul className="sidebar-menu">
                             {categories.map(cat => (
                                 <li key={cat.id}>
-                                    <button 
+                                    <button
                                         className={`sidebar-item ${selectedCategory === cat.id ? 'active' : ''}`}
                                         onClick={() => setSelectedCategory(cat.id)}
                                     >
@@ -118,18 +119,18 @@ const Home = () => {
                             className="hero-inner"
                         >
                             <h1 className="hero-title">
-                                Nâng cấp đời sình <br />
+                                Nâng cấp đời sinh <br />
                                 viên cùng <span className="hero-gradient">UnixShop</span>
                             </h1>
                             <p className="hero-desc">
                                 Khám phá những sản phẩm chất lượng cao từ các nhà bán hàng uy tín
                             </p>
                             <div className="hero-buttons">
-                                <button className="btn-primary">Bắt đầu mua sắm</button>
-                                <button className="btn-secondary">Xem danh mục</button>
+                                <Link to="/shop" className="btn-primary" style={{ textDecoration: 'none' }}>Bắt đầu mua sắm</Link>
+                                <Link to="/shop" className="btn-secondary" style={{ textDecoration: 'none' }}>Xem danh mục</Link>
                             </div>
                         </motion.div>
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, x: 30 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 1 }}
@@ -145,13 +146,13 @@ const Home = () => {
 
                     <section className="products-section">
                         <div className="section-header">
-                            <h2>Tìm đảo mới nhất</h2>
-                            <a href="#" className="view-all">Xem tất cả <ChevronRight size={16} /></a>
+                            <h2>Sản phẩm mới nhất</h2>
+                            <Link to="/shop" className="view-all">Xem tất cả <ChevronRight size={16} /></Link>
                         </div>
 
                         <div className="products-grid">
                             {products.map((product, i) => (
-                                <motion.div 
+                                <motion.div
                                     key={product.id}
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     whileInView={{ opacity: 1, scale: 1 }}
@@ -180,7 +181,7 @@ const Home = () => {
                         </div>
 
                         <div className="view-more-container">
-                            <button className="btn-view-more">Xem thêm các giấy</button>
+                            <Link to="/shop" className="btn-view-more" style={{ textDecoration: 'none' }}>Xem thêm sản phẩm</Link>
                         </div>
                     </section>
                 </main>
