@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { Send, MessageSquare, User, Search, X, MapPin, StickyNote, Home, ShoppingBag, History, Settings, Package, LogOut } from 'lucide-react';
+import { Send, MessageSquare, User, Search, X, MapPin, StickyNote, ShoppingBag, Package, LogOut } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -502,25 +502,21 @@ const Chat = () => {
         return msg.content.substring(0, 40) + (msg.content.length > 40 ? '...' : '');
     };
 
-    const navItems = [
-        { icon: User, label: 'Profile', color: '#6366f1', onClick: () => navigate('/profile') },
-        { icon: ShoppingBag, label: 'My Listings', color: '#8b5cf6', onClick: () => navigate('/my-listings') },
-        { icon: History, label: 'Purchase History', color: '#ec4899', onClick: () => navigate('/history') },
-        { icon: MessageSquare, label: 'Messages', color: '#06b6d4', isActive: true },
-        { icon: Settings, label: 'Settings', color: '#f59e0b', onClick: () => navigate('/settings') }
-    ];
-
     return (
         <div className="home-container">
             <div className="bg-mesh"></div>
             
             <nav className="navbar">
-                <div className="logo">
+                <button 
+                    className="logo" 
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    onClick={() => navigate('/home')}
+                >
                     <div className="logo-icon">
                         <ShoppingBag size={24} color="white" />
                     </div>
                     <span>Student<span style={{ color: 'var(--primary)' }}>Hub</span></span>
-                </div>
+                </button>
 
                 <div className="nav-links">
                     <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
@@ -644,30 +640,6 @@ const Chat = () => {
             </AnimatePresence>
 
             <div className="chat-wrapper">
-                {/* Left Sidebar - Navigation */}
-                <div className="chat-nav-sidebar">
-                    <div className="nav-header">
-                        <h1>Student Hub</h1>
-                        <p>MANAGE YOUR TRADES</p>
-                    </div>
-
-                    <div className="nav-menu">
-                        {navItems.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <div 
-                                    key={item.label}
-                                    className={`nav-item ${item.isActive ? 'active' : ''}`}
-                                    onClick={item.onClick}
-                                >
-                                    <Icon size={20} style={{ color: item.color }} />
-                                    <span>{item.label}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
                 {/* Middle Column - Conversations List */}
                 <div className="conversations-panel">
                     <div className="conversations-header">
@@ -800,7 +772,7 @@ const Chat = () => {
                                     >
                                         {msg.message_type === 'location' ? (
                                             <a href={msg.content} target="_blank" rel="noopener noreferrer" className="location-link">
-                                                📍 Location shared
+                                                Vị trí hiện tại
                                             </a>
                                         ) : (
                                             <>{msg.content}</>

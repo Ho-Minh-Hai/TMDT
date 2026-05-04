@@ -30,12 +30,7 @@
 
 /* ============ Left Sidebar Navigation ============ */
 .chat-nav-sidebar {
-    width: 240px;
-    background: #ffffff;
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    padding: 2rem 0;
+    display: none;
 }
 
 .nav-header {
@@ -95,7 +90,7 @@
 
 /* ============ Conversations Panel (Middle) ============ */
 .conversations-panel {
-    width: 320px;
+    min-width: 280px;
     background: #ffffff;
     border-right: 1px solid var(--border-color);
     display: flex;

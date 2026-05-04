@@ -129,12 +129,16 @@ const Profile = () => {
             <div className="bg-mesh"></div>
             
             <nav className="navbar">
-                <div className="logo">
+                <button 
+                    className="logo" 
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    onClick={() => navigate('/home')}
+                >
                     <div className="logo-icon">
                         <ShoppingBag size={24} color="white" />
                     </div>
                     <span>Student<span style={{ color: 'var(--primary)' }}>Hub</span></span>
-                </div>
+                </button>
 
                 <div className="nav-links">
                     <a href="#" className="nav-link">Bộ sưu tập</a>
