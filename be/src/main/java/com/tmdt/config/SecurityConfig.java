@@ -22,7 +22,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-<<<<<<< HEAD
             .cors(cors -> cors.configurationSource(new CorsConfig().corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -34,19 +33,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 
                 // Authenticated routes cho User thường
-=======
-            .cors(cors -> cors.configurationSource(
-                new CorsConfig().corsConfigurationSource()
-            ))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/health").permitAll()
-                .requestMatchers("/api/chat/**").permitAll()
-                .requestMatchers("/api/notes/**").permitAll()
->>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )
@@ -54,8 +40,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
