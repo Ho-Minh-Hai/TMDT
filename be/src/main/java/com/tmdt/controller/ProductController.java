@@ -1,7 +1,10 @@
 package com.tmdt.controller;
 
+<<<<<<< HEAD
 import com.tmdt.dto.AdminProductDTO;
 import com.tmdt.dto.PageResponseDTO;
+=======
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 import com.tmdt.dto.ProductRequest;
 import com.tmdt.model.Product;
 import com.tmdt.security.UserPrincipal;
@@ -44,6 +47,7 @@ public class ProductController {
                     .body(Map.of("error", "Failed to fetch products: " + e.getMessage()));
         }
     }
+<<<<<<< HEAD
     @GetMapping("/admin")
     public ResponseEntity<?> getAllProductsForAdmin(
             @RequestParam(defaultValue = "1") int page,
@@ -67,6 +71,8 @@ public class ProductController {
                     .body(Map.of("error", "Failed to fetch admin products: " + e.getMessage()));
         }
     }
+=======
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getProduct(@PathVariable String id,

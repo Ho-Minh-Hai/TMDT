@@ -17,7 +17,7 @@ const Auth = () => {
     const [formData, setFormData] = useState({
         email: '',
         password: '',
-        username: ''
+        username: '',
     });
 
     const handleSubmit = async (e) => {
@@ -73,6 +73,8 @@ const Auth = () => {
             setLoading(false);
         }
     };
+
+
 
     return (
         <div className="auth-container">
@@ -151,6 +153,8 @@ const Auth = () => {
                                     onChange={(e) => setFormData({...formData, password: e.target.value})}
                                 />
                             </div>
+
+
 
                             {error && (
                                 <div className="error-message">{error}</div>

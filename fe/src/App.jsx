@@ -3,10 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Auth from './Auth';
 import Home from './Home';
-
-// Thêm các Component dành cho Admin
-import AdminRoute from './components/AdminRoute';
-import Admin from './Admin/Admin';
+import SellerLayout from './components/SellerLayout';
+import SellerDashboard from './pages/SellerDashboard';
+import ProductList from './pages/ProductList';
+import ProductForm from './pages/ProductForm';
+import Profile from './pages/Profile';
+import Chat from './pages/Chat';
+import Shop from './pages/Shop';
+import ProductDetail from './pages/ProductDetail';
 
 /**
  * Protects routes that require authentication.
@@ -22,26 +26,25 @@ const ProtectedRoute = ({ children }) => {
 
 /**
  * Prevents authenticated users from accessing the auth page.
- * Redirects to /home (for user) or /admin (for admin) after login.
+ * Redirects to /home after login.
  */
 const AuthRoute = ({ children }) => {
     const { user, isAdmin } = useAuth();
     if (user) {
-        // Nếu là admin thì đẩy về dashboard admin, ngược lại về home
-        return isAdmin ? <Navigate to="/admin" /> : <Navigate to="/home" />;
+        return <Navigate to="/home" />;
     }
     return children;
 };
 
 /**
- * Catches all unmatched routes and redirects based on auth state and role.
+ * Catches all unmatched routes and redirects based on auth state.
  */
 const CatchAllRedirect = () => {
-    const { user, isAdmin } = useAuth();
+    const { user } = useAuth();
     if (!user) {
         return <Navigate to="/auth" />;
     }
-    return isAdmin ? <Navigate to="/admin" /> : <Navigate to="/home" />;
+    return <Navigate to="/home" />;
 };
 
 function App() {
@@ -49,16 +52,19 @@ function App() {
         <AuthProvider>
             <Router>
                 <Routes>
-                    <Route 
-                        path="/auth" 
+                    {/* Auth page — only for unauthenticated users */}
+                    <Route
+                        path="/auth"
                         element={
                             <AuthRoute>
                                 <Auth />
                             </AuthRoute>
-                        } 
+                        }
                     />
-                    <Route 
-                        path="/" 
+
+                    {/* Home page — default interface for purchases */}
+                    <Route
+                        path="/home"
                         element={
                             <ProtectedRoute>
                                 <Home />
@@ -82,27 +88,27 @@ function App() {
                     </Route>
 
                     {/* Profile page */}
-                    <Route
-                        path="/profile"
+                    <Route 
+                        path="/profile" 
                         element={
                             <ProtectedRoute>
                                 <Profile />
                             </ProtectedRoute>
-                        }
+                        } 
                     />
 
-                    <Route
-                        path="/chat"
+                    <Route 
+                        path="/chat" 
                         element={
                             <ProtectedRoute>
                                 <Chat />
                             </ProtectedRoute>
-                        }
+                        } 
                     />
 
                     {/* Shop page — browse all products */}
-                    <Route
-                        path="/shop"
+                    <Route 
+                        path="/shop" 
                         element={
                             <ProtectedRoute>
                                 <Shop />

@@ -12,10 +12,13 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+<<<<<<< HEAD
 import com.fasterxml.jackson.databind.JsonNode;
 import com.tmdt.dto.AdminProductDTO;
 import com.tmdt.dto.PageResponseDTO;
 import java.math.BigDecimal;
+=======
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 
 import java.util.*;
 
@@ -56,6 +59,7 @@ public class SupabaseService {
             throw new RuntimeException("Failed to parse products", e);
         }
     }
+<<<<<<< HEAD
     public PageResponseDTO<AdminProductDTO> getAdminProducts(int page, int limit) {
         int start = (page - 1) * limit;
         int end = start + limit - 1;
@@ -128,6 +132,8 @@ public class SupabaseService {
             throw new RuntimeException("Failed to fetch admin products: " + e.getMessage(), e);
         }
     }
+=======
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 
     public Product getProduct(String productId) {
         String url = supabaseUrl + "/rest/v1/products?id=eq." + productId;

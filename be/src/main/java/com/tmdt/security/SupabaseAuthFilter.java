@@ -1,12 +1,18 @@
 package com.tmdt.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+<<<<<<< HEAD
 import com.tmdt.service.SupabaseService;
+=======
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+<<<<<<< HEAD
 import org.springframework.beans.factory.annotation.Autowired;
+=======
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +29,7 @@ public class SupabaseAuthFilter extends OncePerRequestFilter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+<<<<<<< HEAD
     @Autowired
     private SupabaseService supabaseService;
 
@@ -30,17 +37,28 @@ public class SupabaseAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+=======
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                     HttpServletResponse response,
+                                     FilterChain filterChain) throws ServletException, IOException {
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
 
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
+<<<<<<< HEAD
+=======
+                // Decode JWT payload (we trust Supabase issued it)
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
                 String[] parts = token.split("\\.");
                 if (parts.length == 3) {
                     String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
                     @SuppressWarnings("unchecked")
                     Map<String, Object> claims = objectMapper.readValue(payload, Map.class);
+<<<<<<< HEAD
                     String userId = (String) claims.get("sub");
 
                     if (userId != null) {
@@ -72,14 +90,39 @@ public class SupabaseAuthFilter extends OncePerRequestFilter {
                         UsernamePasswordAuthenticationToken auth =
                                 new UsernamePasswordAuthenticationToken(
                                         principal, null, Collections.singletonList(authority)
+=======
+
+                    String userId = (String) claims.get("sub");
+                    String role = (String) claims.get("role");
+
+                    if (userId != null) {
+                        // Store the full token so the service can forward it to Supabase
+                        UserPrincipal principal = new UserPrincipal(userId, token, role);
+                        UsernamePasswordAuthenticationToken auth =
+                                new UsernamePasswordAuthenticationToken(
+                                        principal,
+                                        null,
+                                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
                                 );
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     }
                 }
             } catch (Exception e) {
+<<<<<<< HEAD
                 System.err.println("JWT decode error: " + e.getMessage());
             }
         }
         filterChain.doFilter(request, response);
     }
 }
+=======
+                // Invalid token — don't authenticate
+                System.err.println("JWT decode error: " + e.getMessage());
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+>>>>>>> 8bdb7abe26673c0996177e7f5b87f44ce48833d3
