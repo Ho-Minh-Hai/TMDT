@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
+import Admin from './Admin/Admin';
 
 /**
  * Protects routes that require authentication.

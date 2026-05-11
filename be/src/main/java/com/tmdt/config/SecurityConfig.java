@@ -33,6 +33,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 
                 // Authenticated routes cho User thường
+                .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/chat/**").permitAll()
+                .requestMatchers("/api/notes/**").permitAll()
+                .requestMatchers("/api/offers/**").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reviews/product/**").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )

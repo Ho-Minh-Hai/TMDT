@@ -155,6 +155,32 @@ public class ProductController {
         }
     }
 
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<?> toggleStatus(@PathVariable String id,
+                                           @AuthenticationPrincipal UserPrincipal principal) {
+        try {
+            Product existing = supabaseService.getProduct(id);
+            if (existing == null) {
+                return ResponseEntity.notFound().build();
+            }
+            if (!existing.getSellerId().equals(principal.getUserId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only update your own products"));
+            }
+
+            String newStatus = "available".equals(existing.getStatus()) ? "sold" : "available";
+            Map<String, Object> data = new HashMap<>();
+            data.put("status", newStatus);
+            data.put("updated_at", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+
+            Product updated = supabaseService.updateProduct(id, data);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to toggle status: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/upload-image")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file,
                                           @AuthenticationPrincipal UserPrincipal principal) {

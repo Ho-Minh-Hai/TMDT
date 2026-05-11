@@ -67,7 +67,6 @@ const Shop = () => {
             const { data, error } = await supabase
                 .from('products')
                 .select('*')
-                .eq('status', 'available')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -430,7 +429,7 @@ const Shop = () => {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: Math.min(i * 0.05, 0.5) }}
-                                        className="shop-card"
+                                        className={`shop-card ${product.status === 'sold' ? 'sold' : ''}`}
                                         onClick={() => navigate(`/product/${product.id}`)}
                                         onMouseEnter={() => setHoveredProduct(product.id)}
                                         onMouseLeave={() => setHoveredProduct(null)}
@@ -444,6 +443,21 @@ const Shop = () => {
                                                 </div>
                                             )}
                                             <div className="shop-card-badges">
+                                                {product.status === 'sold' && (
+                                                    <span className="sold-badge" style={{ 
+                                                        background: '#ef4444', 
+                                                        color: 'white', 
+                                                        fontSize: '0.7rem', 
+                                                        fontWeight: '800',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '6px',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.05em',
+                                                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)'
+                                                    }}>
+                                                        Đã bán
+                                                    </span>
+                                                )}
                                                 {product.condition && (
                                                     <span className={`condition-badge ${product.condition}`}>
                                                         {CONDITIONS_MAP[product.condition] || product.condition}
