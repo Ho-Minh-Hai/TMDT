@@ -802,9 +802,8 @@
 /* ============ Deal Confirm Banner ============ */
 .deal-banner {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
     padding: 0.875rem 1.25rem;
     margin: 0 1rem 0;
     border-radius: 14px;
@@ -812,6 +811,18 @@
     border: 1.5px solid rgba(99, 102, 241, 0.25);
     flex-shrink: 0;
     animation: bannerPulse 2.5s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+.deal-banner.counter-mode {
+    animation: none;
+}
+
+.deal-banner-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     flex-wrap: wrap;
 }
 
@@ -918,6 +929,132 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Counter-offer button */
+.deal-counter-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+    border: 1.5px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.deal-counter-btn:hover:not(:disabled) {
+    background: #f59e0b;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+
+.deal-counter-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Counter-offer inline form */
+.deal-counter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed rgba(99, 102, 241, 0.2);
+}
+
+.deal-counter-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.deal-counter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.deal-counter-input {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.5rem 0.75rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #111827;
+    background: white;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.deal-counter-input:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.deal-counter-submit {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.deal-counter-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.deal-counter-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.deal-counter-cancel {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    border: none;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.deal-counter-cancel:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.deal-counter-hint {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #16a34a;
+}
+
+.deal-counter-error {
+    font-size: 0.78rem;
+    color: #ef4444;
+    font-weight: 600;
+}
+
 
 /* ============ Offer Message Bubble ============ */
 .message-bubble.offer-msg {

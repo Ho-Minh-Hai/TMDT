@@ -31,6 +31,9 @@ const Chat = () => {
     // -- Offer state --
     const [activeOffer, setActiveOffer] = useState(null);
     const [offerLoading, setOfferLoading] = useState(false);
+    const [showCounterInput, setShowCounterInput] = useState(false);
+    const [counterPrice, setCounterPrice] = useState('');
+    const [counterError, setCounterError] = useState('');
 
     const messagesEndRef = useRef(null);
 
@@ -132,9 +135,70 @@ const Chat = () => {
                     })
                 });
                 setActiveOffer(null);
+                setShowCounterInput(false);
             }
         } catch (e) {
             alert('Lỗi: ' + e.message);
+        } finally {
+            setOfferLoading(false);
+        }
+    };
+
+    const handleCounterOffer = async () => {
+        const priceNum = Number(counterPrice);
+        const origPrice = activeOffer.originalPrice || activeOffer.original_price;
+        if (!counterPrice || isNaN(priceNum) || priceNum <= 0) {
+            setCounterError('Vui lòng nhập giá hợp lệ!');
+            return;
+        }
+        if (priceNum >= origPrice) {
+            setCounterError('Giá phải thấp hơn giá gốc (' +
+                new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(origPrice) + ')!');
+            return;
+        }
+        setOfferLoading(true);
+        try {
+            const formatVND = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+            const convId = activeOffer.conversationId || activeOffer.conversation_id;
+
+            // 1. Reject offer cũ
+            await fetch(`http://localhost:8080/api/offers/${activeOffer.id}/reject`, { method: 'POST' });
+
+            // 2. Tạo offer mới với giá counter
+            const offerRes = await fetch('http://localhost:8080/api/offers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: activeOffer.productId || activeOffer.product_id,
+                    conversation_id: convId,
+                    buyer_id: activeOffer.buyerId || activeOffer.buyer_id,
+                    seller_id: activeOffer.sellerId || activeOffer.seller_id,
+                    original_price: origPrice,
+                    offer_price: priceNum
+                })
+            });
+            if (!offerRes.ok) throw new Error('Không thể tạo counter-offer');
+            const newOffer = await offerRes.json();
+
+            // 3. Gửi tin nhắn thông báo counter
+            const oldPrice = activeOffer.offerPrice || activeOffer.offer_price;
+            await fetch('http://localhost:8080/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: convId,
+                    sender_id: user.id,
+                    content: `🔄 Đề xuất giá lại:\nGiá cũ: ${formatVND(oldPrice)}\nGiá mới đề xuất: ${formatVND(priceNum)}\n\nBạn có đồng ý không?`,
+                    message_type: 'offer'
+                })
+            });
+
+            setActiveOffer(newOffer);
+            setShowCounterInput(false);
+            setCounterPrice('');
+            setCounterError('');
+        } catch (e) {
+            setCounterError(e.message);
         } finally {
             setOfferLoading(false);
         }
@@ -853,40 +917,91 @@ const Chat = () => {
 
                         {/* Deal Confirm Banner */}
                         {activeOffer && (
-                            <div className={`deal-banner ${activeOffer.status}`}>
-                                <div className="deal-banner-info">
-                                    <Handshake size={20} />
-                                    <div>
-                                        <div className="deal-banner-title">
-                                            {activeOffer.status === 'pending' && '💰 Đề xuất giá đang chờ xác nhận'}
-                                            {activeOffer.status === 'buyer_confirmed' && '✔️ Người mua đã xác nhận — Chờ người bán'}
-                                            {activeOffer.status === 'seller_confirmed' && '✔️ Người bán đã xác nhận — Chờ người mua'}
-                                        </div>
-                                        <div className="deal-banner-price">
-                                            <span className="deal-orig">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activeOffer.originalPrice || activeOffer.original_price)}</span>
-                                            <span className="deal-arrow">→</span>
-                                            <span className="deal-new">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activeOffer.offerPrice || activeOffer.offer_price)}</span>
+                            <div className={`deal-banner ${activeOffer.status} ${showCounterInput ? 'counter-mode' : ''}`}>
+                                <div className="deal-banner-top">
+                                    <div className="deal-banner-info">
+                                        <Handshake size={20} />
+                                        <div>
+                                            <div className="deal-banner-title">
+                                                {activeOffer.status === 'pending' && '💰 Đề xuất giá đang chờ xác nhận'}
+                                                {activeOffer.status === 'buyer_confirmed' && '✔️ Người mua đã xác nhận — Chờ người bán'}
+                                                {activeOffer.status === 'seller_confirmed' && '✔️ Người bán đã xác nhận — Chờ người mua'}
+                                            </div>
+                                            <div className="deal-banner-price">
+                                                <span className="deal-orig">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activeOffer.originalPrice || activeOffer.original_price)}</span>
+                                                <span className="deal-arrow">→</span>
+                                                <span className="deal-new">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activeOffer.offerPrice || activeOffer.offer_price)}</span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <div className="deal-banner-actions">
+                                        <button
+                                            className="deal-confirm-btn"
+                                            onClick={handleConfirmOffer}
+                                            disabled={offerLoading}
+                                            title="Xác nhận giá"
+                                        >
+                                            <CheckCircle2 size={16} /> Xác nhận
+                                        </button>
+                                        <button
+                                            className="deal-counter-btn"
+                                            onClick={() => {
+                                                setShowCounterInput(!showCounterInput);
+                                                setCounterPrice((activeOffer.offerPrice || activeOffer.offer_price).toString());
+                                                setCounterError('');
+                                            }}
+                                            disabled={offerLoading}
+                                            title="Đề xuất giá khác"
+                                        >
+                                            <DollarSign size={16} /> Đề giá khác
+                                        </button>
+                                        <button
+                                            className="deal-reject-btn"
+                                            onClick={handleRejectOffer}
+                                            disabled={offerLoading}
+                                            title="Từ chối"
+                                        >
+                                            <XCircle size={16} /> Từ chối
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="deal-banner-actions">
-                                    <button
-                                        className="deal-confirm-btn"
-                                        onClick={handleConfirmOffer}
-                                        disabled={offerLoading}
-                                        title="Xác nhận giá đã thống nhất"
-                                    >
-                                        <CheckCircle2 size={16} /> Xác nhận
-                                    </button>
-                                    <button
-                                        className="deal-reject-btn"
-                                        onClick={handleRejectOffer}
-                                        disabled={offerLoading}
-                                        title="Từ chối"
-                                    >
-                                        <XCircle size={16} /> Từ chối
-                                    </button>
-                                </div>
+
+                                {/* Inline counter-offer input */}
+                                {showCounterInput && (
+                                    <div className="deal-counter-form">
+                                        <div className="deal-counter-input-row">
+                                            <span className="deal-counter-label">Giá bạn muốn:</span>
+                                            <input
+                                                type="number"
+                                                className="deal-counter-input"
+                                                value={counterPrice}
+                                                onChange={e => { setCounterPrice(e.target.value); setCounterError(''); }}
+                                                placeholder="Nhập giá đề xuất lại..."
+                                                min="1000"
+                                            />
+                                            <button
+                                                className="deal-counter-submit"
+                                                onClick={handleCounterOffer}
+                                                disabled={offerLoading}
+                                            >
+                                                {offerLoading ? '...' : 'Gửi'}
+                                            </button>
+                                            <button
+                                                className="deal-counter-cancel"
+                                                onClick={() => { setShowCounterInput(false); setCounterError(''); }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                        {counterPrice && !isNaN(Number(counterPrice)) && Number(counterPrice) > 0 && (
+                                            <div className="deal-counter-hint">
+                                                Tiết kiệm: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((activeOffer.originalPrice || activeOffer.original_price) - Number(counterPrice))}
+                                                {' '}({Math.round((1 - Number(counterPrice) / (activeOffer.originalPrice || activeOffer.original_price)) * 100)}%)
+                                            </div>
+                                        )}
+                                        {counterError && <div className="deal-counter-error">{counterError}</div>}
+                                    </div>
+                                )}
                             </div>
                         )}
 
