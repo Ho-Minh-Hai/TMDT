@@ -5,9 +5,9 @@ import { supabase } from '../supabaseClient';
 import {
     ShoppingBag, ArrowLeft, MapPin, Clock, User, LogOut,
     MessageSquare, Package, ChevronRight, Heart, Share2,
-    Shield, Star, Tag, AlertCircle, CheckCircle , MoreVertical,Image
+    Shield, Star, Tag, AlertCircle, CheckCircle , MoreVertical, Image, DollarSign, X
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import './ProductDetail.css';
 
 const CONDITIONS_MAP = {
@@ -30,6 +30,12 @@ const ProductDetail = () => {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [isFavorited, setIsFavorited] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    // -- State cho Make Offer --
+    const [showOfferModal, setShowOfferModal] = useState(false);
+    const [offerPrice, setOfferPrice] = useState('');
+    const [offerError, setOfferError] = useState('');
+    const [offerLoading, setOfferLoading] = useState(false);
 
     // -- State cho Reviews (Bình luận & Đánh giá) --
     const [reviews, setReviews] = useState([]);
@@ -362,6 +368,75 @@ const ProductDetail = () => {
         }
     };
 
+    const handleMakeOffer = () => {
+        if (!user) { alert('Vui lòng đăng nhập để đề xuất giá!'); return; }
+        if (!seller || seller.id === user.id) return;
+        setOfferPrice(Math.round(product.price * 0.9).toString()); // Gợi ý 90% giá gốc
+        setOfferError('');
+        setShowOfferModal(true);
+    };
+
+    const handleSubmitOffer = async () => {
+        const priceNum = Number(offerPrice);
+        if (!offerPrice || isNaN(priceNum) || priceNum <= 0) {
+            setOfferError('Vui lòng nhập giá hợp lệ!');
+            return;
+        }
+        if (priceNum >= product.price) {
+            setOfferError('Giá đề xuất phải thấp hơn giá gốc!');
+            return;
+        }
+
+        setOfferLoading(true);
+        try {
+            // 1. Get or create conversation
+            const convRes = await fetch('http://localhost:8080/api/chat/conversations/get-or-create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user1_id: user.id, user2_id: seller.id })
+            });
+            if (!convRes.ok) throw new Error('Không thể tạo cuộc trò chuyện');
+            const conversation = await convRes.json();
+
+            // 2. Create price offer record
+            const offerRes = await fetch('http://localhost:8080/api/offers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: product.id,
+                    conversation_id: conversation.id,
+                    buyer_id: user.id,
+                    seller_id: seller.id,
+                    original_price: product.price,
+                    offer_price: priceNum
+                })
+            });
+            if (!offerRes.ok) throw new Error('Không thể tạo offer');
+
+            // 3. Gửi tin nhắn mẫu vào cuộc trò chuyện
+            const formatVND = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+            const offerMessage = `💰 Đề xuất giá cho "${product.name}"\nGiá gốc: ${formatVND(product.price)}\nGiá đề xuất: ${formatVND(priceNum)}\n\nBạn có đồng ý không?`;
+
+            await fetch('http://localhost:8080/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: conversation.id,
+                    sender_id: user.id,
+                    content: offerMessage,
+                    message_type: 'offer'
+                })
+            });
+
+            setShowOfferModal(false);
+            navigate('/chat');
+        } catch (err) {
+            setOfferError(err.message);
+        } finally {
+            setOfferLoading(false);
+        }
+    };
+
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href);
         setCopied(true);
@@ -401,6 +476,62 @@ const ProductDetail = () => {
     return (
         <div className="detail-page">
             <div className="bg-mesh"></div>
+
+            {/* Make Offer Modal */}
+            <AnimatePresence>
+                {showOfferModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="offer-modal-overlay"
+                        onClick={() => setShowOfferModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.85, y: 30 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.85, y: 30 }}
+                            className="offer-modal"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="offer-modal-header">
+                                <h2><DollarSign size={22} /> Đề xuất giá</h2>
+                                <button className="offer-modal-close" onClick={() => setShowOfferModal(false)}><X size={22} /></button>
+                            </div>
+                            <div className="offer-modal-body">
+                                <div className="offer-product-info">
+                                    <span className="offer-product-name">{product.name}</span>
+                                    <span className="offer-original-price">Giá gốc: {formatPrice(product.price)}</span>
+                                </div>
+                                <div className="offer-input-group">
+                                    <label>Giá bạn muốn đề xuất (₫)</label>
+                                    <input
+                                        type="number"
+                                        value={offerPrice}
+                                        onChange={e => { setOfferPrice(e.target.value); setOfferError(''); }}
+                                        placeholder="Nhập giá đề xuất..."
+                                        min="1000"
+                                        max={product.price - 1}
+                                    />
+                                    {offerError && <p className="offer-error">{offerError}</p>}
+                                    {offerPrice && !isNaN(Number(offerPrice)) && Number(offerPrice) > 0 && (
+                                        <p className="offer-discount-hint">
+                                            Tiết kiệm: {formatPrice(product.price - Number(offerPrice))} ({Math.round((1 - Number(offerPrice)/product.price)*100)}%)
+                                        </p>
+                                    )}
+                                </div>
+                                <p className="offer-note">💬 Đề xuất sẽ được gửi qua tin nhắn đến người bán. Sau khi cả hai bên đồng ý, giá sản phẩm sẽ được cập nhật.</p>
+                            </div>
+                            <div className="offer-modal-footer">
+                                <button className="offer-btn-cancel" onClick={() => setShowOfferModal(false)}>Hủy</button>
+                                <button className="offer-btn-submit" onClick={handleSubmitOffer} disabled={offerLoading}>
+                                    {offerLoading ? 'Đang gửi...' : '🚀 Gửi đề xuất'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Navbar */}
             <nav className="navbar">
@@ -487,10 +618,16 @@ const ProductDetail = () => {
                         <button className="btn-chat-seller" onClick={handleChatWithSeller}>
                             <MessageSquare size={20} /> Chat với người bán
                         </button>
-                        <button className="btn-offer" onClick={handleCopyLink}>
+                        <button className="btn-share-link" onClick={handleCopyLink}>
                             {copied ? <><CheckCircle size={18} /> Đã sao chép!</> : <><Share2 size={18} /> Chia sẻ</>}
                         </button>
                     </div>
+                    {/* Make Offer button - chỉ hiện nếu không phải seller */}
+                    {user && seller && seller.id !== user.id && (
+                        <button className="btn-make-offer" onClick={handleMakeOffer}>
+                            <DollarSign size={20} /> Đề xuất giá
+                        </button>
+                    )}
 
                     {seller && (
                         <div className="detail-seller-card">

@@ -487,6 +487,155 @@ public class SupabaseService {
         HttpHeaders headers = createHeaders();
         restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
     }
+    // ==================== PRICE OFFERS ====================
+
+    public PriceOffer createPriceOffer(Map<String, Object> offerData) {
+        String url = supabaseUrl + "/rest/v1/price_offers";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        // Set defaults
+        offerData.put("status", "pending");
+        offerData.put("initiated_by", offerData.get("buyer_id"));
+
+        try {
+            String body = objectMapper.writeValueAsString(offerData);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class
+            );
+            List<PriceOffer> offers = objectMapper.readValue(response.getBody(), new TypeReference<List<PriceOffer>>() {});
+            return offers.isEmpty() ? null : offers.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create price offer: " + e.getMessage(), e);
+        }
+    }
+
+    public List<PriceOffer> getOffersByConversation(String conversationId) {
+        String url = supabaseUrl + "/rest/v1/price_offers?conversation_id=eq." + conversationId
+                + "&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<PriceOffer>>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get price offers: " + e.getMessage(), e);
+        }
+    }
+
+    public PriceOffer confirmPriceOffer(String offerId, String userId) {
+        // Lấy offer hiện tại để biết trạng thái và ai là buyer/seller
+        String getUrl = supabaseUrl + "/rest/v1/price_offers?id=eq." + offerId;
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        try {
+            ResponseEntity<String> getRes = restTemplate.exchange(
+                    getUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class
+            );
+            List<PriceOffer> offers = objectMapper.readValue(getRes.getBody(), new TypeReference<List<PriceOffer>>() {});
+            if (offers.isEmpty()) throw new RuntimeException("Offer not found");
+
+            PriceOffer offer = offers.get(0);
+            String buyerId = offer.getBuyerId();
+            String sellerId = offer.getSellerId();
+            String currentStatus = offer.getStatus();
+
+            // Xác định status mới dựa trên người bấm
+            String newStatus;
+            boolean shouldUpdatePrice = false;
+
+            boolean isBuyer = userId.equals(buyerId);
+            boolean isSeller = userId.equals(sellerId);
+
+            if ("pending".equals(currentStatus)) {
+                // Offer vừa tạo (buyer tạo), bên nào confirm trước
+                if (isBuyer) {
+                    newStatus = "buyer_confirmed";
+                } else if (isSeller) {
+                    newStatus = "seller_confirmed";
+                } else {
+                    throw new RuntimeException("User is not part of this offer");
+                }
+            } else if ("buyer_confirmed".equals(currentStatus) && isSeller) {
+                // Buyer đã confirm, seller confirm → accepted
+                newStatus = "accepted";
+                shouldUpdatePrice = true;
+            } else if ("seller_confirmed".equals(currentStatus) && isBuyer) {
+                // Seller đã confirm, buyer confirm → accepted
+                newStatus = "accepted";
+                shouldUpdatePrice = true;
+            } else {
+                throw new RuntimeException("Không thể xác nhận ở trạng thái này: " + currentStatus);
+            }
+
+            // Cập nhật status offer
+            String patchUrl = supabaseUrl + "/rest/v1/price_offers?id=eq." + offerId;
+            HttpHeaders patchHeaders = createHeaders();
+            patchHeaders.setContentType(MediaType.APPLICATION_JSON);
+            patchHeaders.set("Prefer", "return=representation");
+
+            Map<String, Object> patchBody = new HashMap<>();
+            patchBody.put("status", newStatus);
+            patchBody.put("updated_at", java.time.OffsetDateTime.now().toString());
+
+            String patchJson = objectMapper.writeValueAsString(patchBody);
+            ResponseEntity<String> patchRes = restTemplate.exchange(
+                    patchUrl, HttpMethod.PATCH, new HttpEntity<>(patchJson, patchHeaders), String.class
+            );
+
+            List<PriceOffer> updated = objectMapper.readValue(patchRes.getBody(), new TypeReference<List<PriceOffer>>() {});
+            PriceOffer updatedOffer = updated.isEmpty() ? offer : updated.get(0);
+
+            // Nếu cả 2 đã xác nhận → update giá sản phẩm
+            if (shouldUpdatePrice && offer.getProductId() != null && offer.getOfferPrice() != null) {
+                updateProductPrice(offer.getProductId(), offer.getOfferPrice());
+            }
+
+            return updatedOffer;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to confirm offer: " + e.getMessage(), e);
+        }
+    }
+
+    public void rejectPriceOffer(String offerId) {
+        String url = supabaseUrl + "/rest/v1/price_offers?id=eq." + offerId;
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("status", "rejected");
+            body.put("updated_at", java.time.OffsetDateTime.now().toString());
+
+            restTemplate.exchange(url, HttpMethod.PATCH,
+                    new HttpEntity<>(objectMapper.writeValueAsString(body), headers), String.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to reject offer: " + e.getMessage(), e);
+        }
+    }
+
+    private void updateProductPrice(String productId, java.math.BigDecimal newPrice) {
+        String url = supabaseUrl + "/rest/v1/products?id=eq." + productId;
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("price", newPrice);
+            body.put("updated_at", java.time.OffsetDateTime.now().toString());
+
+            restTemplate.exchange(url, HttpMethod.PATCH,
+                    new HttpEntity<>(objectMapper.writeValueAsString(body), headers), String.class);
+        } catch (Exception e) {
+            System.err.println("Failed to update product price: " + e.getMessage());
+        }
+    }
+
     // ==================== HELPERS ====================
 
     private HttpHeaders createHeaders() {
