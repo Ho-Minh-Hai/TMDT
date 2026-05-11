@@ -130,7 +130,7 @@ const Chat = () => {
                     body: JSON.stringify({
                         conversation_id: activeOffer.conversationId || activeOffer.conversation_id,
                         sender_id: user.id,
-                        content: `❌ Đã từ chối đề xuất giá ${formatVND(activeOffer.offerPrice || activeOffer.offer_price)}.`,
+                        content: ` Đã từ chối đề xuất giá ${formatVND(activeOffer.offerPrice || activeOffer.offer_price)}.`,
                         message_type: 'text'
                     })
                 });
@@ -188,7 +188,7 @@ const Chat = () => {
                 body: JSON.stringify({
                     conversation_id: convId,
                     sender_id: user.id,
-                    content: `🔄 Đề xuất giá lại:\nGiá cũ: ${formatVND(oldPrice)}\nGiá mới đề xuất: ${formatVND(priceNum)}\n\nBạn có đồng ý không?`,
+                    content: ` Đề xuất giá lại:\nGiá cũ: ${formatVND(oldPrice)}\nGiá mới đề xuất: ${formatVND(priceNum)}\n\nBạn có đồng ý không?`,
                     message_type: 'offer'
                 })
             });
@@ -652,7 +652,7 @@ const Chat = () => {
     const formatLastMessage = (msg) => {
         if (!msg) return 'Không có tin nhắn';
         if (msg.message_type === 'location') return '📍 Vị trí chia sẻ';
-        if (msg.message_type === 'offer') return '💰 Đề xuất giá';
+        if (msg.message_type === 'offer') return ' Đề xuất giá';
         return msg.content.substring(0, 40) + (msg.content.length > 40 ? '...' : '');
     };
 

@@ -20,7 +20,7 @@ const CONDITIONS_MAP = {
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, profile, signOut } = useAuth();
+    const { user, profile, signOut, getAccessToken } = useAuth();
 
     // -- State cho Sản phẩm --
     const [product, setProduct] = useState(null);
@@ -437,6 +437,32 @@ const ProductDetail = () => {
         }
     };
 
+    const handleToggleSoldStatus = async () => {
+        if (!user || !product || product.seller_id !== user.id) return;
+        
+        try {
+            const token = await getAccessToken();
+            const response = await fetch(`http://localhost:8080/api/products/${product.id}/toggle-status`, {
+                method: 'PATCH',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const updatedProduct = await response.json();
+                setProduct(updatedProduct);
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Không thể cập nhật trạng thái');
+            }
+        } catch (error) {
+            console.error('Error toggling sold status:', error);
+            alert('Lỗi kết nối server');
+        }
+    };
+
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href);
         setCopied(true);
@@ -600,7 +626,13 @@ const ProductDetail = () => {
                 {/* Right: Product Info */}
                 <motion.div className="detail-info" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                     <div className="detail-status-row">
-                        <span className="detail-status-badge available"><CheckCircle size={14} /> Đang bán</span>
+                        {product.status === 'sold' ? (
+                            <span className="detail-status-badge sold" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}>
+                                <AlertCircle size={14} /> Đã bán
+                            </span>
+                        ) : (
+                            <span className="detail-status-badge available"><CheckCircle size={14} /> Đang bán</span>
+                        )}
                         <span className="detail-posted"><Clock size={14} /> Đăng {formatTimeAgo(product.created_at)}</span>
                     </div>
 
@@ -615,9 +647,38 @@ const ProductDetail = () => {
                     </div>
 
                     <div className="detail-actions">
-                        <button className="btn-chat-seller" onClick={handleChatWithSeller}>
-                            <MessageSquare size={20} /> Chat với người bán
-                        </button>
+                        {user && seller && seller.id === user.id ? (
+                            <button 
+                                className={`btn-toggle-sold ${product.status === 'sold' ? 'is-sold' : ''}`} 
+                                onClick={handleToggleSoldStatus}
+                                style={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.6rem',
+                                    padding: '0.9rem 1.5rem',
+                                    background: product.status === 'sold' ? '#22c55e' : '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '14px',
+                                    fontSize: '0.95rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                {product.status === 'sold' ? (
+                                    <> <CheckCircle size={20} /> Đánh dấu còn hàng </>
+                                ) : (
+                                    <> <Package size={20} /> Đánh dấu đã bán </>
+                                )}
+                            </button>
+                        ) : (
+                            <button className="btn-chat-seller" onClick={handleChatWithSeller}>
+                                <MessageSquare size={20} /> Chat với người bán
+                            </button>
+                        )}
                         <button className="btn-share-link" onClick={handleCopyLink}>
                             {copied ? <><CheckCircle size={18} /> Đã sao chép!</> : <><Share2 size={18} /> Chia sẻ</>}
                         </button>
