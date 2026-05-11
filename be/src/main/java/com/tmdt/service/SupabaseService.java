@@ -3,10 +3,7 @@ package com.tmdt.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.tmdt.model.Product;
-import com.tmdt.model.Conversation;
-import com.tmdt.model.Message;
-import com.tmdt.model.Note;
+import com.tmdt.model.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -396,7 +393,100 @@ public class SupabaseService {
             throw new RuntimeException("Failed to update note: " + e.getMessage(), e);
         }
     }
+// ==================== REVIEWS ====================
 
+    // 1. Lấy danh sách đánh giá của 1 sản phẩm
+    public List<Review> getReviewsByProduct(String productId) {
+        String url = supabaseUrl + "/rest/v1/reviews?product_id=eq." + productId + "&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Review>>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse reviews", e);
+        }
+    }
+
+    // 2. Kiểm tra xem user đã đánh giá sản phẩm này chưa (Chống spam)
+    public boolean hasUserReviewedProduct(String productId, String reviewerId) {
+        String url = supabaseUrl + "/rest/v1/reviews?product_id=eq." + productId + "&reviewer_id=eq." + reviewerId;
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+
+        try {
+            List<Review> reviews = objectMapper.readValue(response.getBody(), new TypeReference<List<Review>>() {});
+            return !reviews.isEmpty(); // Trả về true nếu list không rỗng (đã đánh giá)
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to check existing review", e);
+        }
+    }
+
+    // 3. Tạo đánh giá mới
+    public Review createReview(Map<String, Object> reviewData) {
+        String url = supabaseUrl + "/rest/v1/reviews";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        try {
+            String body = objectMapper.writeValueAsString(reviewData);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class
+            );
+
+            List<Review> reviews = objectMapper.readValue(response.getBody(), new TypeReference<List<Review>>() {});
+            return reviews.isEmpty() ? null : reviews.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create review: " + e.getMessage(), e);
+        }
+    }
+    // Lấy 1 đánh giá (Dùng để check xem ai là chủ của đánh giá này)
+    public Review getReviewById(String reviewId) {
+        String url = supabaseUrl + "/rest/v1/reviews?id=eq." + reviewId;
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        try {
+            List<Review> reviews = objectMapper.readValue(response.getBody(), new TypeReference<List<Review>>() {});
+            return reviews.isEmpty() ? null : reviews.get(0);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Cập nhật đánh giá
+    public Review updateReview(String reviewId, Map<String, Object> reviewData) {
+        String url = supabaseUrl + "/rest/v1/reviews?id=eq." + reviewId;
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+        try {
+            String body = objectMapper.writeValueAsString(reviewData);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PATCH, new HttpEntity<>(body, headers), String.class
+            );
+            List<Review> reviews = objectMapper.readValue(response.getBody(), new TypeReference<List<Review>>() {});
+            return reviews.isEmpty() ? null : reviews.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi update review", e);
+        }
+    }
+
+    // Xóa đánh giá
+    public void deleteReview(String reviewId) {
+        String url = supabaseUrl + "/rest/v1/reviews?id=eq." + reviewId;
+        HttpHeaders headers = createHeaders();
+        restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
+    }
     // ==================== HELPERS ====================
 
     private HttpHeaders createHeaders() {
