@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { Send, MessageSquare, User, Search, X, MapPin, StickyNote, ShoppingBag, Package, LogOut } from 'lucide-react';
+import { Send, MessageSquare, User, Search, X, MapPin, StickyNote, ShoppingBag, Package, LogOut, Handshake, DollarSign, CheckCircle2, XCircle } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -27,6 +27,13 @@ const Chat = () => {
     const [showNoteModal, setShowNoteModal] = useState(false);
     const [noteForm, setNoteForm] = useState({ title: '', content: '', deadline: '' });
     const [pendingNotes, setPendingNotes] = useState([]);
+
+    // -- Offer state --
+    const [activeOffer, setActiveOffer] = useState(null);
+    const [offerLoading, setOfferLoading] = useState(false);
+    const [showCounterInput, setShowCounterInput] = useState(false);
+    const [counterPrice, setCounterPrice] = useState('');
+    const [counterError, setCounterError] = useState('');
 
     const messagesEndRef = useRef(null);
 
@@ -55,6 +62,146 @@ const Chat = () => {
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    // ==================== OFFER ====================
+    const fetchActiveOffer = async (conversationId) => {
+        if (!conversationId) return;
+        try {
+            const res = await fetch(`http://localhost:8080/api/offers/conversation/${conversationId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setActiveOffer(data); // null nếu không có offer active
+            }
+        } catch (e) {
+            console.error('Error fetching offer:', e);
+        }
+    };
+
+    const handleConfirmOffer = async () => {
+        if (!activeOffer || !user) return;
+        setOfferLoading(true);
+        try {
+            const res = await fetch(`http://localhost:8080/api/offers/${activeOffer.id}/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id })
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setActiveOffer(updated);
+                // Nếu đã accepted, gửi tin nhắn thông báo và fetch lại
+                if (updated.status === 'accepted') {
+                    const formatVND = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+                    await fetch('http://localhost:8080/api/chat/messages', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            conversation_id: activeOffer.conversationId || activeOffer.conversation_id,
+                            sender_id: user.id,
+                            content: `✅ Đã thống nhất giá! Giá mới: ${formatVND(activeOffer.offerPrice || activeOffer.offer_price)}`,
+                            message_type: 'text'
+                        })
+                    });
+                    setActiveOffer(null);
+                }
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Không thể xác nhận');
+            }
+        } catch (e) {
+            alert('Lỗi: ' + e.message);
+        } finally {
+            setOfferLoading(false);
+        }
+    };
+
+    const handleRejectOffer = async () => {
+        if (!activeOffer || !user) return;
+        if (!window.confirm('Bạn có chắc muốn từ chối đề xuất giá này?')) return;
+        setOfferLoading(true);
+        try {
+            const res = await fetch(`http://localhost:8080/api/offers/${activeOffer.id}/reject`, { method: 'POST' });
+            if (res.ok) {
+                const formatVND = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+                await fetch('http://localhost:8080/api/chat/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        conversation_id: activeOffer.conversationId || activeOffer.conversation_id,
+                        sender_id: user.id,
+                        content: ` Đã từ chối đề xuất giá ${formatVND(activeOffer.offerPrice || activeOffer.offer_price)}.`,
+                        message_type: 'text'
+                    })
+                });
+                setActiveOffer(null);
+                setShowCounterInput(false);
+            }
+        } catch (e) {
+            alert('Lỗi: ' + e.message);
+        } finally {
+            setOfferLoading(false);
+        }
+    };
+
+    const handleCounterOffer = async () => {
+        const priceNum = Number(counterPrice);
+        const origPrice = activeOffer.originalPrice || activeOffer.original_price;
+        if (!counterPrice || isNaN(priceNum) || priceNum <= 0) {
+            setCounterError('Vui lòng nhập giá hợp lệ!');
+            return;
+        }
+        if (priceNum >= origPrice) {
+            setCounterError('Giá phải thấp hơn giá gốc (' +
+                new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(origPrice) + ')!');
+            return;
+        }
+        setOfferLoading(true);
+        try {
+            const formatVND = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+            const convId = activeOffer.conversationId || activeOffer.conversation_id;
+
+            // 1. Reject offer cũ
+            await fetch(`http://localhost:8080/api/offers/${activeOffer.id}/reject`, { method: 'POST' });
+
+            // 2. Tạo offer mới với giá counter
+            const offerRes = await fetch('http://localhost:8080/api/offers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: activeOffer.productId || activeOffer.product_id,
+                    conversation_id: convId,
+                    buyer_id: activeOffer.buyerId || activeOffer.buyer_id,
+                    seller_id: activeOffer.sellerId || activeOffer.seller_id,
+                    original_price: origPrice,
+                    offer_price: priceNum
+                })
+            });
+            if (!offerRes.ok) throw new Error('Không thể tạo counter-offer');
+            const newOffer = await offerRes.json();
+
+            // 3. Gửi tin nhắn thông báo counter
+            const oldPrice = activeOffer.offerPrice || activeOffer.offer_price;
+            await fetch('http://localhost:8080/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: convId,
+                    sender_id: user.id,
+                    content: ` Đề xuất giá lại:\nGiá cũ: ${formatVND(oldPrice)}\nGiá mới đề xuất: ${formatVND(priceNum)}\n\nBạn có đồng ý không?`,
+                    message_type: 'offer'
+                })
+            });
+
+            setActiveOffer(newOffer);
+            setShowCounterInput(false);
+            setCounterPrice('');
+            setCounterError('');
+        } catch (e) {
+            setCounterError(e.message);
+        } finally {
+            setOfferLoading(false);
+        }
     };
 
     const markAsRead = async (conversationId) => {
@@ -271,6 +418,10 @@ const Chat = () => {
 
         fetchMessages();
 
+        // Poll active offer whenever conversation changes
+        fetchActiveOffer(activeConv.id);
+        const offerInterval = setInterval(() => fetchActiveOffer(activeConv.id), 5000);
+
         const msgChannel = supabase
             .channel(`room:${activeConv.id}`)
             .on('postgres_changes', 
@@ -294,7 +445,10 @@ const Chat = () => {
             )
             .subscribe();
 
-        return () => supabase.removeChannel(msgChannel);
+        return () => {
+            supabase.removeChannel(msgChannel);
+            clearInterval(offerInterval);
+        };
     }, [activeConv]);
 
     const handleStartChat = async (targetUser) => {
@@ -452,7 +606,6 @@ const Chat = () => {
                 })
             });
 
-            const responseData = await response.json();
 
             if (response.ok) {
                 setShowNoteModal(false);
@@ -499,6 +652,7 @@ const Chat = () => {
     const formatLastMessage = (msg) => {
         if (!msg) return 'Không có tin nhắn';
         if (msg.message_type === 'location') return '📍 Vị trí chia sẻ';
+        if (msg.message_type === 'offer') return ' Đề xuất giá';
         return msg.content.substring(0, 40) + (msg.content.length > 40 ? '...' : '');
     };
 
@@ -761,6 +915,96 @@ const Chat = () => {
                             </div>
                         </div>
 
+                        {/* Deal Confirm Banner */}
+                        {activeOffer && (
+                            <div className={`deal-banner ${activeOffer.status} ${showCounterInput ? 'counter-mode' : ''}`}>
+                                <div className="deal-banner-top">
+                                    <div className="deal-banner-info">
+                                        <Handshake size={20} />
+                                        <div>
+                                            <div className="deal-banner-title">
+                                                {activeOffer.status === 'pending' && '💰 Đề xuất giá đang chờ xác nhận'}
+                                                {activeOffer.status === 'buyer_confirmed' && '✔️ Người mua đã xác nhận — Chờ người bán'}
+                                                {activeOffer.status === 'seller_confirmed' && '✔️ Người bán đã xác nhận — Chờ người mua'}
+                                            </div>
+                                            <div className="deal-banner-price">
+                                                <span className="deal-orig">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activeOffer.originalPrice || activeOffer.original_price)}</span>
+                                                <span className="deal-arrow">→</span>
+                                                <span className="deal-new">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(activeOffer.offerPrice || activeOffer.offer_price)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="deal-banner-actions">
+                                        <button
+                                            className="deal-confirm-btn"
+                                            onClick={handleConfirmOffer}
+                                            disabled={offerLoading}
+                                            title="Xác nhận giá"
+                                        >
+                                            <CheckCircle2 size={16} /> Xác nhận
+                                        </button>
+                                        <button
+                                            className="deal-counter-btn"
+                                            onClick={() => {
+                                                setShowCounterInput(!showCounterInput);
+                                                setCounterPrice((activeOffer.offerPrice || activeOffer.offer_price).toString());
+                                                setCounterError('');
+                                            }}
+                                            disabled={offerLoading}
+                                            title="Đề xuất giá khác"
+                                        >
+                                            <DollarSign size={16} /> Đề giá khác
+                                        </button>
+                                        <button
+                                            className="deal-reject-btn"
+                                            onClick={handleRejectOffer}
+                                            disabled={offerLoading}
+                                            title="Từ chối"
+                                        >
+                                            <XCircle size={16} /> Từ chối
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Inline counter-offer input */}
+                                {showCounterInput && (
+                                    <div className="deal-counter-form">
+                                        <div className="deal-counter-input-row">
+                                            <span className="deal-counter-label">Giá bạn muốn:</span>
+                                            <input
+                                                type="number"
+                                                className="deal-counter-input"
+                                                value={counterPrice}
+                                                onChange={e => { setCounterPrice(e.target.value); setCounterError(''); }}
+                                                placeholder="Nhập giá đề xuất lại..."
+                                                min="1000"
+                                            />
+                                            <button
+                                                className="deal-counter-submit"
+                                                onClick={handleCounterOffer}
+                                                disabled={offerLoading}
+                                            >
+                                                {offerLoading ? '...' : 'Gửi'}
+                                            </button>
+                                            <button
+                                                className="deal-counter-cancel"
+                                                onClick={() => { setShowCounterInput(false); setCounterError(''); }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                        {counterPrice && !isNaN(Number(counterPrice)) && Number(counterPrice) > 0 && (
+                                            <div className="deal-counter-hint">
+                                                Tiết kiệm: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((activeOffer.originalPrice || activeOffer.original_price) - Number(counterPrice))}
+                                                {' '}({Math.round((1 - Number(counterPrice) / (activeOffer.originalPrice || activeOffer.original_price)) * 100)}%)
+                                            </div>
+                                        )}
+                                        {counterError && <div className="deal-counter-error">{counterError}</div>}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="messages-area">
                             <AnimatePresence initial={false}>
                                 {messages.map((msg, index) => (
@@ -768,12 +1012,17 @@ const Chat = () => {
                                         key={msg.id || index}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}
+                                        className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'} ${msg.message_type === 'offer' ? 'offer-msg' : ''}`}
                                     >
                                         {msg.message_type === 'location' ? (
                                             <a href={msg.content} target="_blank" rel="noopener noreferrer" className="location-link">
                                                 Vị trí hiện tại
                                             </a>
+                                        ) : msg.message_type === 'offer' ? (
+                                            <div className="offer-bubble-content">
+                                                <DollarSign size={16} />
+                                                <span style={{ whiteSpace: 'pre-line' }}>{msg.content}</span>
+                                            </div>
                                         ) : (
                                             <>{msg.content}</>
                                         )}
