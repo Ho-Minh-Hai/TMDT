@@ -5,7 +5,8 @@ import { supabase } from '../supabaseClient';
 import {
     ShoppingBag, MapPin, Clock, User, LogOut,
     MessageSquare, Package, ChevronRight, Heart, Share2,
-    Shield, Star, Tag, AlertCircle, CheckCircle , MoreVertical, Image, DollarSign, X
+    Shield, Star, Tag, AlertCircle, CheckCircle, MoreVertical, Image, DollarSign, X,
+    TrendingUp, Eye, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWishlist } from '../hooks/useWishlist';
@@ -22,12 +23,13 @@ const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, profile, signOut, getAccessToken } = useAuth();
-    const { isWishlisted, toggleWishlist } = useWishlist();
+    const { isWishlisted, toggleWishlist, wishlistCount } = useWishlist();
 
     // -- State cho Sản phẩm --
     const [product, setProduct] = useState(null);
     const [seller, setSeller] = useState(null);
     const [relatedProducts, setRelatedProducts] = useState([]);
+    const [relatedSellers, setRelatedSellers] = useState({});
     const [loading, setLoading] = useState(true);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [wishlistToast, setWishlistToast] = useState(null);
@@ -98,7 +100,22 @@ const ProductDetail = () => {
                     .neq('id', id)
                     .limit(4)
                     .order('created_at', { ascending: false });
-                setRelatedProducts(related || []);
+                const relatedList = related || [];
+                setRelatedProducts(relatedList);
+
+                // Fetch seller profiles for related products
+                if (relatedList.length > 0) {
+                    const sellerIds = [...new Set(relatedList.map(r => r.seller_id).filter(Boolean))];
+                    if (sellerIds.length > 0) {
+                        const { data: sellersData } = await supabase
+                            .from('profiles')
+                            .select('id, full_name, avatar_url')
+                            .in('id', sellerIds);
+                        const map = {};
+                        (sellersData || []).forEach(s => { map[s.id] = s; });
+                        setRelatedSellers(map);
+                    }
+                }
             }
         } catch (err) {
             console.error('Error fetching product:', err);
@@ -591,10 +608,33 @@ const ProductDetail = () => {
                     <Link to="/shop" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Bộ sưu tập</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
+                    <Link to="/wishlist" className="nav-icon-link" title="Yêu thích" style={{ position: 'relative' }}>
+                        <Heart size={20} />
+                        {wishlistCount > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-4px',
+                                right: '-4px',
+                                background: '#ef4444',
+                                color: 'white',
+                                fontSize: '0.65rem',
+                                fontWeight: '700',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                lineHeight: 1,
+                            }}>
+                                {wishlistCount}
+                            </span>
+                        )}
+                    </Link>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
                         <MessageSquare size={20} />
                     </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
+                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
                         <Package size={20} />
                     </Link>
                 </div>
@@ -1064,30 +1104,125 @@ const ProductDetail = () => {
                 </div>
             </section>
 
-            {/* Related Products */}
-            {relatedProducts.length > 0 && (
-                <section className="detail-related">
-                    <div className="related-header">
-                        <h2>Sản phẩm liên quan</h2>
-                        <Link to="/shop" className="view-all">Xem tất cả <ChevronRight size={16} /></Link>
+            {/* Related Products - Sản phẩm liên quan */}
+            <section className="detail-related">
+                <div className="related-header">
+                    <div className="related-title-group">
+                        <div className="related-title-icon">
+                            <TrendingUp size={20} color="white" />
+                        </div>
+                        <div>
+                            <h2>Sản phẩm liên quan</h2>
+                            <p>Cùng danh mục &ldquo;{product?.category}&rdquo;</p>
+                        </div>
                     </div>
+                    <Link to={`/shop?category=${encodeURIComponent(product?.category || '')}`} className="related-view-all">
+                        Xem tất cả <ArrowRight size={16} />
+                    </Link>
+                </div>
+
+                {relatedProducts.length === 0 ? (
+                    <div className="related-empty">
+                        <Package size={40} strokeWidth={1.2} />
+                        <p>Chưa có sản phẩm liên quan nào trong danh mục này.</p>
+                        <Link to="/shop" className="related-browse-btn">
+                            Khám phá sản phẩm khác
+                        </Link>
+                    </div>
+                ) : (
                     <div className="related-grid">
-                        {relatedProducts.map((rp, i) => (
-                            <motion.div key={rp.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                                <Link to={`/product/${rp.id}`} className="related-card">
+                        {relatedProducts.map((rp, i) => {
+                            const rpSeller = relatedSellers[rp.seller_id];
+                            const condition = CONDITIONS_MAP[rp.condition];
+                            const favorited = isWishlisted(rp.id);
+                            return (
+                                <motion.div
+                                    key={rp.id}
+                                    className="related-card"
+                                    initial={{ opacity: 0, y: 24 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: i * 0.08 }}
+                                    onClick={() => navigate(`/product/${rp.id}`)}
+                                >
+                                    {/* Ảnh sản phẩm */}
                                     <div className="related-card-image">
-                                        {rp.image_url ? <img src={rp.image_url} alt={rp.name} /> : <div className="related-card-placeholder"><Package size={32} /></div>}
+                                        {rp.image_url ? (
+                                            <img src={rp.image_url} alt={rp.name} loading="lazy" />
+                                        ) : (
+                                            <div className="related-card-placeholder">
+                                                <Package size={36} strokeWidth={1} />
+                                            </div>
+                                        )}
+
+                                        {/* Condition badge */}
+                                        {condition && (
+                                            <span
+                                                className="related-condition-badge"
+                                                style={{ background: condition.color }}
+                                            >
+                                                {condition.label}
+                                            </span>
+                                        )}
+
+                                        {/* Wishlist button */}
+                                        <motion.button
+                                            className={`related-heart-btn ${favorited ? 'active' : ''}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!user) return;
+                                                toggleWishlist(rp.id);
+                                            }}
+                                            whileTap={{ scale: 0.85 }}
+                                            title={favorited ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                        >
+                                            <Heart
+                                                size={15}
+                                                fill={favorited ? '#ef4444' : 'none'}
+                                                color={favorited ? '#ef4444' : 'white'}
+                                            />
+                                        </motion.button>
+
+                                        {/* Hover overlay */}
+                                        <div className="related-card-overlay">
+                                            <Eye size={18} />
+                                            <span>Xem chi tiết</span>
+                                        </div>
                                     </div>
+
+                                    {/* Thông tin sản phẩm */}
                                     <div className="related-card-body">
                                         <h4 className="related-card-title">{rp.name}</h4>
-                                        <span className="related-card-price">{formatPrice(rp.price)}</span>
+
+                                        <div className="related-card-price">
+                                            {formatPrice(rp.price)}
+                                        </div>
+
+                                        <div className="related-card-footer">
+                                            {rp.location && (
+                                                <span className="related-card-location">
+                                                    <MapPin size={12} />
+                                                    {rp.location}
+                                                </span>
+                                            )}
+                                            {rpSeller && (
+                                                <span className="related-card-seller">
+                                                    {rpSeller.avatar_url ? (
+                                                        <img src={rpSeller.avatar_url} alt={rpSeller.full_name} />
+                                                    ) : (
+                                                        <User size={11} />
+                                                    )}
+                                                    {rpSeller.full_name}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </Link>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            );
+                        })}
                     </div>
-                </section>
-            )}
+                )}
+            </section>
 
             {/* Footer */}
             <footer className="shop-footer">
