@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import {
-    ShoppingBag, Search, Star, Heart, Filter, Grid, List,
-    ChevronDown, X, MapPin, Clock, User, LogOut,
-    MessageSquare, Package, ChevronRight, SlidersHorizontal,
+    ShoppingBag, Search, Heart, Filter, Grid, List,
+    X, MapPin, Clock, User, LogOut,
+    MessageSquare, Package, SlidersHorizontal,
     Tag, Zap, ArrowUpDown, Eye
 } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWishlist } from '../hooks/useWishlist';
 import './Shop.css';
 
 const CATEGORIES = [
@@ -40,6 +41,7 @@ const SORT_OPTIONS = [
 const Shop = () => {
     const { user, profile, signOut } = useAuth();
     const navigate = useNavigate();
+    const { isWishlisted, toggleWishlist, wishlistCount } = useWishlist();
 
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
@@ -55,6 +57,24 @@ const Shop = () => {
     const [viewMode, setViewMode] = useState('grid');
     const [sellerProfiles, setSellerProfiles] = useState({});
     const [hoveredProduct, setHoveredProduct] = useState(null);
+    const [wishlistToast, setWishlistToast] = useState(null);
+
+    const handleToggleWishlist = async (e, productId) => {
+        e.stopPropagation();
+        if (!user) {
+            setWishlistToast({ msg: 'Vui lòng đăng nhập để yêu thích!', type: 'error' });
+            setTimeout(() => setWishlistToast(null), 2500);
+            return;
+        }
+        const result = await toggleWishlist(productId);
+        if (result.success) {
+            setWishlistToast({
+                msg: result.added ? '❤️ Đã thêm vào yêu thích!' : '💔 Đã xóa khỏi yêu thích!',
+                type: result.added ? 'success' : 'info'
+            });
+            setTimeout(() => setWishlistToast(null), 2000);
+        }
+    };
 
     // Fetch all available products from Supabase directly
     useEffect(() => {
@@ -198,6 +218,29 @@ const Shop = () => {
                     <Link to="/shop" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Bộ sưu tập</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
+                    <Link to="/wishlist" className="nav-icon-link" title="Yêu thích" style={{ position: 'relative' }}>
+                        <Heart size={20} />
+                        {wishlistCount > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-4px',
+                                right: '-4px',
+                                background: '#ef4444',
+                                color: 'white',
+                                fontSize: '0.65rem',
+                                fontWeight: '700',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                lineHeight: 1,
+                            }}>
+                                {wishlistCount}
+                            </span>
+                        )}
+                    </Link>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
                         <MessageSquare size={20} />
                     </Link>
@@ -442,6 +485,20 @@ const Shop = () => {
                                                     <Package size={40} />
                                                 </div>
                                             )}
+                                            {/* Nút Yêu thích */}
+                                            <motion.button
+                                                className={`shop-card-heart-btn ${isWishlisted(product.id) ? 'active' : ''}`}
+                                                onClick={(e) => handleToggleWishlist(e, product.id)}
+                                                title={isWishlisted(product.id) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                                whileTap={{ scale: 0.85 }}
+                                                animate={isWishlisted(product.id) ? { scale: [1, 1.3, 1] } : {}}
+                                            >
+                                                <Heart
+                                                    size={18}
+                                                    fill={isWishlisted(product.id) ? '#ef4444' : 'none'}
+                                                    color={isWishlisted(product.id) ? '#ef4444' : 'white'}
+                                                />
+                                            </motion.button>
                                             <div className="shop-card-badges">
                                                 {product.status === 'sold' && (
                                                     <span className="sold-badge" style={{ 
@@ -528,6 +585,39 @@ const Shop = () => {
                     )}
                 </main>
             </div>
+
+            {/* Toast thông báo Wishlist */}
+            <AnimatePresence>
+                {wishlistToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 40, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 40, x: '-50%' }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '2rem',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: wishlistToast.type === 'error'
+                                ? 'rgba(239, 68, 68, 0.92)'
+                                : wishlistToast.type === 'success'
+                                    ? 'rgba(34, 197, 94, 0.92)'
+                                    : 'rgba(99, 102, 241, 0.92)',
+                            backdropFilter: 'blur(12px)',
+                            color: 'white',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '50px',
+                            fontWeight: '600',
+                            fontSize: '0.95rem',
+                            zIndex: 9999,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {wishlistToast.msg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Footer */}
             <footer className="shop-footer">

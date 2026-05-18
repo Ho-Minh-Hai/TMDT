@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
+import Wishlist from './pages/Wishlist';
 
 /**
  * Protects routes that require authentication.
@@ -122,6 +123,16 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <ProductDetail />
+                            </ProtectedRoute>
+                        } 
+                    />
+
+                    {/* Wishlist page */}
+                    <Route 
+                        path="/wishlist" 
+                        element={
+                            <ProtectedRoute>
+                                <Wishlist />
                             </ProtectedRoute>
                         } 
                     />

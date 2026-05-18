@@ -3,11 +3,12 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import {
-    ShoppingBag, ArrowLeft, MapPin, Clock, User, LogOut,
+    ShoppingBag, MapPin, Clock, User, LogOut,
     MessageSquare, Package, ChevronRight, Heart, Share2,
     Shield, Star, Tag, AlertCircle, CheckCircle , MoreVertical, Image, DollarSign, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWishlist } from '../hooks/useWishlist';
 import './ProductDetail.css';
 
 const CONDITIONS_MAP = {
@@ -21,6 +22,7 @@ const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, profile, signOut, getAccessToken } = useAuth();
+    const { isWishlisted, toggleWishlist } = useWishlist();
 
     // -- State cho Sản phẩm --
     const [product, setProduct] = useState(null);
@@ -28,7 +30,7 @@ const ProductDetail = () => {
     const [relatedProducts, setRelatedProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [isFavorited, setIsFavorited] = useState(false);
+    const [wishlistToast, setWishlistToast] = useState(null);
     const [copied, setCopied] = useState(false);
 
     // -- State cho Make Offer --
@@ -463,11 +465,28 @@ const ProductDetail = () => {
         }
     };
 
+    const handleToggleWishlist = async () => {
+        if (!user) {
+            setWishlistToast({ msg: 'Vui l\u00f2ng \u0111\u0103ng nh\u1eadp \u0111\u1ec3 y\u00eau th\u00edch!', type: 'error' });
+            setTimeout(() => setWishlistToast(null), 2500);
+            return;
+        }
+        const result = await toggleWishlist(id);
+        if (result.success) {
+            setWishlistToast({
+                msg: result.added ? '\u2764\ufe0f \u0110\u00e3 th\u00eam v\u00e0o y\u00eau th\u00edch!' : '\ud83d\udc94 \u0110\u00e3 x\u00f3a kh\u1ecfi y\u00eau th\u00edch!',
+                type: result.added ? 'success' : 'info'
+            });
+            setTimeout(() => setWishlistToast(null), 2000);
+        }
+    };
+
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
 
     const images = product?.image_url ? [product.image_url] : [];
 
@@ -617,9 +636,14 @@ const ProductDetail = () => {
                                 <span>Chưa có hình ảnh</span>
                             </div>
                         )}
-                        <button className={`fav-btn ${isFavorited ? 'active' : ''}`} onClick={() => setIsFavorited(!isFavorited)}>
-                            <Heart size={22} fill={isFavorited ? '#ef4444' : 'none'} />
-                        </button>
+                        <motion.button
+                            className={`fav-btn ${isWishlisted(id) ? 'active' : ''}`}
+                            onClick={handleToggleWishlist}
+                            whileTap={{ scale: 0.85 }}
+                            title={isWishlisted(id) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                        >
+                            <Heart size={22} fill={isWishlisted(id) ? '#ef4444' : 'none'} color={isWishlisted(id) ? '#ef4444' : 'currentColor'} />
+                        </motion.button>
                     </div>
                 </motion.div>
 
@@ -679,6 +703,19 @@ const ProductDetail = () => {
                                 <MessageSquare size={20} /> Chat với người bán
                             </button>
                         )}
+                        {/* Nút Yêu thích - bên trái nút Chia sẻ */}
+                        <motion.button
+                            className={`btn-wishlist-detail ${isWishlisted(id) ? 'active' : ''}`}
+                            onClick={handleToggleWishlist}
+                            whileTap={{ scale: 0.9 }}
+                            title={isWishlisted(id) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                        >
+                            <Heart
+                                size={20}
+                                fill={isWishlisted(id) ? '#ef4444' : 'none'}
+                                color={isWishlisted(id) ? '#ef4444' : 'currentColor'}
+                            />
+                        </motion.button>
                         <button className="btn-share-link" onClick={handleCopyLink}>
                             {copied ? <><CheckCircle size={18} /> Đã sao chép!</> : <><Share2 size={18} /> Chia sẻ</>}
                         </button>
@@ -1064,6 +1101,39 @@ const ProductDetail = () => {
                     </div>
                 </div>
             </footer>
+
+            {/* Toast th\u00f4ng b\u00e1o Wishlist */}
+            <AnimatePresence>
+                {wishlistToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 40, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 40, x: '-50%' }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '2rem',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: wishlistToast.type === 'error'
+                                ? 'rgba(239, 68, 68, 0.92)'
+                                : wishlistToast.type === 'success'
+                                    ? 'rgba(34, 197, 94, 0.92)'
+                                    : 'rgba(99, 102, 241, 0.92)',
+                            backdropFilter: 'blur(12px)',
+                            color: 'white',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '50px',
+                            fontWeight: '600',
+                            fontSize: '0.95rem',
+                            zIndex: 9999,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {wishlistToast.msg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

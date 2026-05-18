@@ -77,16 +77,15 @@ const Home = () => {
                 </button>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link">Shop</Link>
-                    <a href="#" className="nav-link">Ưu đãi</a>
-                    <a href="#" className="nav-link">Xu hướng</a>
+                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
+                    <Link to="/shop?filter=deals" className="nav-link">Ưu đãi</Link>
+                    <Link to="/shop?filter=trending" className="nav-link">Xu hướng</Link>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
                         <MessageSquare size={20} />
                     </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
+                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
                         <Package size={20} />
                     </Link>
-
                 </div>
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -105,7 +104,7 @@ const Home = () => {
                         <h3 className="sidebar-title">QUẢN LÝ TÀI KHOẢN</h3>
                         <ul className="sidebar-menu">
                             <li><Link to="/profile" className="sidebar-item">👤 Hồ sơ cá nhân</Link></li>
-                            <li><a href="#" className="sidebar-item">📋 Danh sách yêu thích</a></li>
+                            <li><Link to="/wishlist" className="sidebar-item">📌 Danh sách yêu thích</Link></li>
                             <li><a href="#" className="sidebar-item">⏱️ Lịch sử mua hàng</a></li>
                         </ul>
                     </div>

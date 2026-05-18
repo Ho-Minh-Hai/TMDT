@@ -276,6 +276,41 @@
     background: rgba(99, 102, 241, 0.04);
 }
 
+/* Wishlist button in detail actions */
+.btn-wishlist-detail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    background: white;
+    color: #9ca3af;
+    border: 2px solid var(--border-glass);
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: var(--font);
+    flex-shrink: 0;
+}
+
+.btn-wishlist-detail:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.04);
+    transform: scale(1.05);
+}
+
+.btn-wishlist-detail.active {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+
 /* Make Offer Button */
 .btn-make-offer {
     display: flex;
