@@ -3,11 +3,13 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import {
-    ShoppingBag, ArrowLeft, MapPin, Clock, User, LogOut,
+    ShoppingBag, MapPin, Clock, User, LogOut,
     MessageSquare, Package, ChevronRight, Heart, Share2,
-    Shield, Star, Tag, AlertCircle, CheckCircle , MoreVertical, Image, DollarSign, X
+    Shield, Star, Tag, AlertCircle, CheckCircle, MoreVertical, Image, DollarSign, X,
+    TrendingUp, Eye, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWishlist } from '../hooks/useWishlist';
 import './ProductDetail.css';
 
 const CONDITIONS_MAP = {
@@ -21,14 +23,16 @@ const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, profile, signOut, getAccessToken } = useAuth();
+    const { isWishlisted, toggleWishlist, wishlistCount } = useWishlist();
 
     // -- State cho Sản phẩm --
     const [product, setProduct] = useState(null);
     const [seller, setSeller] = useState(null);
     const [relatedProducts, setRelatedProducts] = useState([]);
+    const [relatedSellers, setRelatedSellers] = useState({});
     const [loading, setLoading] = useState(true);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [isFavorited, setIsFavorited] = useState(false);
+    const [wishlistToast, setWishlistToast] = useState(null);
     const [copied, setCopied] = useState(false);
 
     // -- State cho Make Offer --
@@ -96,7 +100,22 @@ const ProductDetail = () => {
                     .neq('id', id)
                     .limit(4)
                     .order('created_at', { ascending: false });
-                setRelatedProducts(related || []);
+                const relatedList = related || [];
+                setRelatedProducts(relatedList);
+
+                // Fetch seller profiles for related products
+                if (relatedList.length > 0) {
+                    const sellerIds = [...new Set(relatedList.map(r => r.seller_id).filter(Boolean))];
+                    if (sellerIds.length > 0) {
+                        const { data: sellersData } = await supabase
+                            .from('profiles')
+                            .select('id, full_name, avatar_url')
+                            .in('id', sellerIds);
+                        const map = {};
+                        (sellersData || []).forEach(s => { map[s.id] = s; });
+                        setRelatedSellers(map);
+                    }
+                }
             }
         } catch (err) {
             console.error('Error fetching product:', err);
@@ -463,11 +482,28 @@ const ProductDetail = () => {
         }
     };
 
+    const handleToggleWishlist = async () => {
+        if (!user) {
+            setWishlistToast({ msg: 'Vui l\u00f2ng \u0111\u0103ng nh\u1eadp \u0111\u1ec3 y\u00eau th\u00edch!', type: 'error' });
+            setTimeout(() => setWishlistToast(null), 2500);
+            return;
+        }
+        const result = await toggleWishlist(id);
+        if (result.success) {
+            setWishlistToast({
+                msg: result.added ? '\u2764\ufe0f \u0110\u00e3 th\u00eam v\u00e0o y\u00eau th\u00edch!' : '\ud83d\udc94 \u0110\u00e3 x\u00f3a kh\u1ecfi y\u00eau th\u00edch!',
+                type: result.added ? 'success' : 'info'
+            });
+            setTimeout(() => setWishlistToast(null), 2000);
+        }
+    };
+
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
 
     const images = product?.image_url ? [product.image_url] : [];
 
@@ -572,10 +608,33 @@ const ProductDetail = () => {
                     <Link to="/shop" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Bộ sưu tập</Link>
                     <a href="#" className="nav-link">Ưu đãi</a>
                     <a href="#" className="nav-link">Xu hướng</a>
+                    <Link to="/wishlist" className="nav-icon-link" title="Yêu thích" style={{ position: 'relative' }}>
+                        <Heart size={20} />
+                        {wishlistCount > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-4px',
+                                right: '-4px',
+                                background: '#ef4444',
+                                color: 'white',
+                                fontSize: '0.65rem',
+                                fontWeight: '700',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                lineHeight: 1,
+                            }}>
+                                {wishlistCount}
+                            </span>
+                        )}
+                    </Link>
                     <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
                         <MessageSquare size={20} />
                     </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
+                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
                         <Package size={20} />
                     </Link>
                 </div>
@@ -617,9 +676,14 @@ const ProductDetail = () => {
                                 <span>Chưa có hình ảnh</span>
                             </div>
                         )}
-                        <button className={`fav-btn ${isFavorited ? 'active' : ''}`} onClick={() => setIsFavorited(!isFavorited)}>
-                            <Heart size={22} fill={isFavorited ? '#ef4444' : 'none'} />
-                        </button>
+                        <motion.button
+                            className={`fav-btn ${isWishlisted(id) ? 'active' : ''}`}
+                            onClick={handleToggleWishlist}
+                            whileTap={{ scale: 0.85 }}
+                            title={isWishlisted(id) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                        >
+                            <Heart size={22} fill={isWishlisted(id) ? '#ef4444' : 'none'} color={isWishlisted(id) ? '#ef4444' : 'currentColor'} />
+                        </motion.button>
                     </div>
                 </motion.div>
 
@@ -679,6 +743,19 @@ const ProductDetail = () => {
                                 <MessageSquare size={20} /> Chat với người bán
                             </button>
                         )}
+                        {/* Nút Yêu thích - bên trái nút Chia sẻ */}
+                        <motion.button
+                            className={`btn-wishlist-detail ${isWishlisted(id) ? 'active' : ''}`}
+                            onClick={handleToggleWishlist}
+                            whileTap={{ scale: 0.9 }}
+                            title={isWishlisted(id) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                        >
+                            <Heart
+                                size={20}
+                                fill={isWishlisted(id) ? '#ef4444' : 'none'}
+                                color={isWishlisted(id) ? '#ef4444' : 'currentColor'}
+                            />
+                        </motion.button>
                         <button className="btn-share-link" onClick={handleCopyLink}>
                             {copied ? <><CheckCircle size={18} /> Đã sao chép!</> : <><Share2 size={18} /> Chia sẻ</>}
                         </button>
@@ -1027,30 +1104,125 @@ const ProductDetail = () => {
                 </div>
             </section>
 
-            {/* Related Products */}
-            {relatedProducts.length > 0 && (
-                <section className="detail-related">
-                    <div className="related-header">
-                        <h2>Sản phẩm liên quan</h2>
-                        <Link to="/shop" className="view-all">Xem tất cả <ChevronRight size={16} /></Link>
+            {/* Related Products - Sản phẩm liên quan */}
+            <section className="detail-related">
+                <div className="related-header">
+                    <div className="related-title-group">
+                        <div className="related-title-icon">
+                            <TrendingUp size={20} color="white" />
+                        </div>
+                        <div>
+                            <h2>Sản phẩm liên quan</h2>
+                            <p>Cùng danh mục &ldquo;{product?.category}&rdquo;</p>
+                        </div>
                     </div>
+                    <Link to={`/shop?category=${encodeURIComponent(product?.category || '')}`} className="related-view-all">
+                        Xem tất cả <ArrowRight size={16} />
+                    </Link>
+                </div>
+
+                {relatedProducts.length === 0 ? (
+                    <div className="related-empty">
+                        <Package size={40} strokeWidth={1.2} />
+                        <p>Chưa có sản phẩm liên quan nào trong danh mục này.</p>
+                        <Link to="/shop" className="related-browse-btn">
+                            Khám phá sản phẩm khác
+                        </Link>
+                    </div>
+                ) : (
                     <div className="related-grid">
-                        {relatedProducts.map((rp, i) => (
-                            <motion.div key={rp.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                                <Link to={`/product/${rp.id}`} className="related-card">
+                        {relatedProducts.map((rp, i) => {
+                            const rpSeller = relatedSellers[rp.seller_id];
+                            const condition = CONDITIONS_MAP[rp.condition];
+                            const favorited = isWishlisted(rp.id);
+                            return (
+                                <motion.div
+                                    key={rp.id}
+                                    className="related-card"
+                                    initial={{ opacity: 0, y: 24 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: i * 0.08 }}
+                                    onClick={() => navigate(`/product/${rp.id}`)}
+                                >
+                                    {/* Ảnh sản phẩm */}
                                     <div className="related-card-image">
-                                        {rp.image_url ? <img src={rp.image_url} alt={rp.name} /> : <div className="related-card-placeholder"><Package size={32} /></div>}
+                                        {rp.image_url ? (
+                                            <img src={rp.image_url} alt={rp.name} loading="lazy" />
+                                        ) : (
+                                            <div className="related-card-placeholder">
+                                                <Package size={36} strokeWidth={1} />
+                                            </div>
+                                        )}
+
+                                        {/* Condition badge */}
+                                        {condition && (
+                                            <span
+                                                className="related-condition-badge"
+                                                style={{ background: condition.color }}
+                                            >
+                                                {condition.label}
+                                            </span>
+                                        )}
+
+                                        {/* Wishlist button */}
+                                        <motion.button
+                                            className={`related-heart-btn ${favorited ? 'active' : ''}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!user) return;
+                                                toggleWishlist(rp.id);
+                                            }}
+                                            whileTap={{ scale: 0.85 }}
+                                            title={favorited ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                        >
+                                            <Heart
+                                                size={15}
+                                                fill={favorited ? '#ef4444' : 'none'}
+                                                color={favorited ? '#ef4444' : 'white'}
+                                            />
+                                        </motion.button>
+
+                                        {/* Hover overlay */}
+                                        <div className="related-card-overlay">
+                                            <Eye size={18} />
+                                            <span>Xem chi tiết</span>
+                                        </div>
                                     </div>
+
+                                    {/* Thông tin sản phẩm */}
                                     <div className="related-card-body">
                                         <h4 className="related-card-title">{rp.name}</h4>
-                                        <span className="related-card-price">{formatPrice(rp.price)}</span>
+
+                                        <div className="related-card-price">
+                                            {formatPrice(rp.price)}
+                                        </div>
+
+                                        <div className="related-card-footer">
+                                            {rp.location && (
+                                                <span className="related-card-location">
+                                                    <MapPin size={12} />
+                                                    {rp.location}
+                                                </span>
+                                            )}
+                                            {rpSeller && (
+                                                <span className="related-card-seller">
+                                                    {rpSeller.avatar_url ? (
+                                                        <img src={rpSeller.avatar_url} alt={rpSeller.full_name} />
+                                                    ) : (
+                                                        <User size={11} />
+                                                    )}
+                                                    {rpSeller.full_name}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </Link>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            );
+                        })}
                     </div>
-                </section>
-            )}
+                )}
+            </section>
 
             {/* Footer */}
             <footer className="shop-footer">
@@ -1064,6 +1236,39 @@ const ProductDetail = () => {
                     </div>
                 </div>
             </footer>
+
+            {/* Toast th\u00f4ng b\u00e1o Wishlist */}
+            <AnimatePresence>
+                {wishlistToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 40, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 40, x: '-50%' }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '2rem',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: wishlistToast.type === 'error'
+                                ? 'rgba(239, 68, 68, 0.92)'
+                                : wishlistToast.type === 'success'
+                                    ? 'rgba(34, 197, 94, 0.92)'
+                                    : 'rgba(99, 102, 241, 0.92)',
+                            backdropFilter: 'blur(12px)',
+                            color: 'white',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '50px',
+                            fontWeight: '600',
+                            fontSize: '0.95rem',
+                            zIndex: 9999,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {wishlistToast.msg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

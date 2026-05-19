@@ -12,6 +12,7 @@ import Chat from './pages/Chat';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import Admin from './Admin/Admin';
+import Wishlist from './pages/Wishlist';
 
 /**
  * Protects routes that require authentication.
@@ -133,6 +134,16 @@ function App() {
                     <Route
                         path="/admin"
                         element={<Admin />}
+                    />
+
+                    {/* Wishlist page */}
+                    <Route 
+                        path="/wishlist" 
+                        element={
+                            <ProtectedRoute>
+                                <Wishlist />
+                            </ProtectedRoute>
+                        } 
                     />
 
                     {/* Catch-all — redirect based on role */}
