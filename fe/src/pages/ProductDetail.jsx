@@ -534,7 +534,27 @@ const ProductDetail = () => {
     }
 
     const conditionInfo = CONDITIONS_MAP[product.condition] || { label: product.condition, color: '#6b7280' };
+    const handleConfirmPurchase = async () => {
+        if (!window.confirm("Bạn xác nhận là mình đã mua, thanh toán và nhận sản phẩm này thành công chứ?")) return;
 
+        try {
+            const token = await getAccessToken();
+            const response = await fetch(`http://localhost:8080/api/orders/confirm-purchase/${product.id}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                alert("Giao dịch thành công! Đã lưu vào Lịch sử mua hàng của bạn.");
+                navigate('/purchase-history'); // Chuyển hướng sang trang lịch sử
+            } else {
+                const errorText = await response.text();
+                alert(errorText || "Có lỗi xảy ra, vui lòng thử lại!");
+            }
+        } catch (error) {
+            console.error("Lỗi xác nhận mua hàng:", error);
+        }
+    };
     return (
         <div className="detail-page">
             <div className="bg-mesh"></div>
@@ -766,7 +786,65 @@ const ProductDetail = () => {
                             <DollarSign size={20} /> Đề xuất giá
                         </button>
                     )}
+                    {/* nút xác nhận đã mua */}
+                    {product.status === 'sold' && user && seller && user.id !== seller.id && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{
+                                marginTop: '1.5rem',
+                                padding: '1.25rem',
+                                backgroundColor: '#f0fdf4',
+                                borderRadius: '16px',
+                                border: '1px solid #dcfce7',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.06)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
+                                <div style={{ padding: '6px', backgroundColor: '#bbf7d0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <CheckCircle size={18} color="#16a34a" />
+                                </div>
+                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#14532d' }}>
+                                    Xác nhận giao dịch thành công?
+                                </h4>
+                            </div>
 
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.88rem', color: '#166534', lineHeight: '1.5' }}>
+                                Nếu bạn đã gặp người bán, thanh toán tiền mặt và nhận hàng thành công, hãy bấm xác nhận để lưu lại hóa đơn vào lịch sử mua hàng.
+                            </p>
+
+                            <button
+                                onClick={handleConfirmPurchase}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.85rem',
+                                    backgroundColor: '#10b981',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    fontSize: '0.95rem',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.backgroundColor = '#059669';
+                                    e.target.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.backgroundColor = '#10b981';
+                                    e.target.style.transform = 'translateY(0)';
+                                }}
+                            >
+                                <ShoppingBag size={18} /> Xác nhận tôi đã mua hàng
+                            </button>
+                        </motion.div>
+                    )}
                     {seller && (
                         <div className="detail-seller-card">
                             <div className="seller-card-header"><h3>Thông tin người bán</h3></div>
@@ -813,132 +891,151 @@ const ProductDetail = () => {
                 </motion.div>
             </div>
 
-            {/* ==================== REVIEWS SECTION (PHẦN MỚI THÊM) ==================== */}
+            {/* ==================== REVIEWS SECTION (GIAO DIỆN NỀN SÁNG) ==================== */}
             <section className="detail-reviews" style={{
                 maxWidth: '1200px', margin: '3rem auto', padding: '2rem',
-                backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid var(--border-glass)'
+                backgroundColor: '#ffffff', // Nền trắng tinh
+                borderRadius: '24px',
+                border: '1px solid #e5e7eb', // Viền xám nhạt
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' // Bóng đổ nhẹ tạo chiều sâu
             }}>
                 {/* Tiêu đề & Tổng quan đánh giá */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', color: 'white', margin: 0 }}>
+                    <h2 style={{ fontSize: '1.5rem', color: '#111827', margin: 0, fontWeight: '700' }}>
                         Đánh giá & Bình luận ({reviews.length})
                     </h2>
 
-                    {/* Hiển thị sao trung bình (Chỉ hiện khi có ít nhất 1 đánh giá) */}
                     {reviews.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', backgroundColor: 'rgba(251, 191, 36, 0.1)', borderRadius: '12px' }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#fbbf24' }}>
-                {averageRating}
-            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', backgroundColor: '#fffbeb', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#d97706' }}>
+                    {averageRating}
+                </span>
                             <div style={{ display: 'flex', gap: '4px' }}>
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <Star
                                         key={star}
                                         size={20}
-                                        fill={visualRating >= star ? '#fbbf24' : 'transparent'}
-                                        color={visualRating >= star ? '#fbbf24' : '#4b5563'}
+                                        fill={visualRating >= star ? '#f59e0b' : 'transparent'}
+                                        color={visualRating >= star ? '#f59e0b' : '#d1d5db'} // Sao trống màu xám nhạt
                                     />
                                 ))}
                             </div>
-                            <span style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginLeft: '4px' }}>
-                trên 5
-            </span>
+                            <span style={{ color: '#6b7280', fontSize: '0.9rem', marginLeft: '4px' }}>
+                    trên 5
+                </span>
                         </div>
                     )}
                 </div>
+
                 {/* Khung nhập đánh giá */}
-                <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ marginBottom: '2.5rem', paddingBottom: '2.5rem', borderBottom: '1px solid #e5e7eb' }}>
                     {user ? (
                         <form onSubmit={handleSubmitReview}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                <span style={{ color: 'var(--text-dim)' }}>Chọn đánh giá:</span>
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                        key={star}
-                                        size={24}
-                                        fill={(hoverRating || newRating) >= star ? '#fbbf24' : 'transparent'}
-                                        color={(hoverRating || newRating) >= star ? '#fbbf24' : 'var(--text-dim)'}
-                                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
-                                        onMouseEnter={() => setHoverRating(star)}
-                                        onMouseLeave={() => setHoverRating(0)}
-                                        onClick={() => setNewRating(star)}
-                                    />
-                                ))}
-                            </div>
-                            {/* Form nhập nội dung */}
-                            <div style={{ position: 'relative', marginBottom: '1rem' }}>
-        <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Viết đánh giá của bạn về sản phẩm này..."
-            rows="3"
-            style={{
-                width: '100%', padding: '1rem', borderRadius: '12px',
-                backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-glass)',
-                color: 'white', outline: 'none', resize: 'vertical'
-            }}
-        />
-
-                                {/* Nút chọn ảnh */}
-                                <label
-                                    style={{
-                                        position: 'absolute', bottom: '10px', right: '10px',
-                                        cursor: 'pointer', color: 'var(--text-dim)', padding: '5px'
-                                    }}
-                                    title="Đính kèm hình ảnh"
-                                >
-                                    <Image size={20} />
-                                    <input
-                                        type="file"
-                                        accept="image/*" // Chỉ nhận ảnh. Nếu muốn nhận cả video: accept="image/*,video/*"
-                                        onChange={handleFileChange}
-                                        style={{ display: 'none' }}
-                                    />
-                                </label>
-                            </div>
-
-                            {/* Hiển thị ảnh xem trước */}
-                            {previewUrl && (
-                                <div style={{ width: '100%', marginBottom: '1rem' }}> {/* Thẻ div bọc ngoài để ép xuống dòng */}
-                                    <div style={{ position: 'relative', display: 'inline-block' }}>
-                                        <img
-                                            src={previewUrl}
-                                            alt="Preview"
-                                            style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-glass)' }}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                                <span style={{ color: '#4b5563', fontWeight: '500' }}>Chất lượng sản phẩm:</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                            key={star}
+                                            size={28}
+                                            fill={(hoverRating || newRating) >= star ? '#f59e0b' : 'transparent'}
+                                            color={(hoverRating || newRating) >= star ? '#f59e0b' : '#d1d5db'}
+                                            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                                            onMouseEnter={() => setHoverRating(star)}
+                                            onMouseLeave={() => setHoverRating(0)}
+                                            onClick={() => setNewRating(star)}
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
-                                            style={{
-                                                position: 'absolute', top: '-5px', right: '-5px',
-                                                background: '#ef4444', color: 'white', border: 'none',
-                                                borderRadius: '50%', width: '20px', height: '20px',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px'
-                                            }}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
 
-                            {reviewError && <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem' }}>{reviewError}</p>}
+                            <div style={{ width: '100%', marginBottom: '1rem' }}>
+                                <div style={{ position: 'relative' }}>
+                        <textarea
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Hãy chia sẻ nhận xét của bạn về sản phẩm này nhé..."
+                            rows="4"
+                            style={{
+                                width: '100%', padding: '1rem', borderRadius: '12px',
+                                backgroundColor: '#f9fafb', // Nền ô nhập xám rất nhạt
+                                border: '1px solid #d1d5db',
+                                color: '#111827', // Chữ đen
+                                outline: 'none', resize: 'vertical',
+                                fontSize: '0.95rem'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        />
 
-                            <button
-                                type="submit"
-                                disabled={isSubmittingReview || !newComment.trim()}
-                                style={{
-                                    padding: '0.75rem 1.5rem', backgroundColor: 'var(--primary)', color: 'white',
-                                    border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer',
-                                    opacity: (isSubmittingReview || !newComment.trim()) ? 0.5 : 1
-                                }}
-                            >
-                                {isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
-                            </button>
+                                    {/* Nút chọn ảnh */}
+                                    <label
+                                        style={{
+                                            position: 'absolute', bottom: '12px', right: '12px',
+                                            cursor: 'pointer', color: '#6b7280', padding: '6px',
+                                            backgroundColor: 'white', borderRadius: '8px',
+                                            border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)'
+                                        }}
+                                        title="Đính kèm hình ảnh"
+                                    >
+                                        <Image size={18} />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                </div>
+
+                                {/* Hiển thị ảnh xem trước */}
+                                {previewUrl && (
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                                            <img
+                                                src={previewUrl}
+                                                alt="Preview"
+                                                style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px', border: '2px solid #e5e7eb' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
+                                                style={{
+                                                    position: 'absolute', top: '-8px', right: '-8px',
+                                                    background: '#ef4444', color: 'white', border: 'none',
+                                                    borderRadius: '50%', width: '24px', height: '24px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {reviewError && <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: '500' }}>{reviewError}</p>}
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingReview || (!newComment.trim() && !selectedFile)}
+                                    style={{
+                                        padding: '0.75rem 2rem', backgroundColor: 'var(--primary)', color: 'white',
+                                        border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer',
+                                        opacity: (isSubmittingReview || (!newComment.trim() && !selectedFile)) ? 0.5 : 1,
+                                        boxShadow: '0 4px 6px -1px rgba(var(--primary-rgb), 0.2)'
+                                    }}
+                                >
+                                    {isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+                                </button>
+                            </div>
                         </form>
                     ) : (
-                        <div style={{ padding: '1rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '12px', textAlign: 'center' }}>
-                            <p style={{ color: 'var(--text-dim)' }}>Vui lòng <Link to="/auth" style={{ color: 'var(--primary)' }}>đăng nhập</Link> để để lại đánh giá.</p>
+                        <div style={{ padding: '2rem', backgroundColor: '#f9fafb', borderRadius: '12px', textAlign: 'center', border: '1px dashed #d1d5db' }}>
+                            <p style={{ color: '#4b5563', margin: 0 }}>Vui lòng <Link to="/auth" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>đăng nhập</Link> để để lại đánh giá của bạn.</p>
                         </div>
                     )}
                 </div>
@@ -947,59 +1044,63 @@ const ProductDetail = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {reviews.length > 0 ? (
                         reviews.map((rev) => (
-                            <div key={rev.id || Math.random()} style={{ padding: '1.5rem', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '16px' }}>
+                            <div key={rev.id || Math.random()} style={{ padding: '1.5rem', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #f3f4f6', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
 
-                                {/* Dòng Header: Avatar, Tên, Thời gian, Sao & Nút 3 chấm */}
+                                {/* Header đánh giá */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-
-                                    {/* Phần bên trái: Avatar & Thông tin */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                                             {rev.reviewerAvatar ? (
                                                 <img src={rev.reviewerAvatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : (
-                                                <User size={20} color="var(--text-dim)" />
+                                                <User size={22} color="#9ca3af" />
                                             )}
                                         </div>
                                         <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontWeight: '600', color: 'white', fontSize: '0.95rem' }}>{rev.reviewerName}</span>
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{formatTimeAgo(rev.created_at)}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontWeight: '700', color: '#111827', fontSize: '0.95rem' }}>{rev.reviewerName}</span>
+                                                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>• {formatTimeAgo(rev.created_at)}</span>
                                             </div>
-                                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                            <div style={{ display: 'flex', gap: '2px', marginTop: '4px' }}>
                                                 {[1, 2, 3, 4, 5].map((star) => (
-                                                    <Star key={star} size={14} fill={rev.rating >= star ? '#fbbf24' : 'transparent'} color={rev.rating >= star ? '#fbbf24' : '#4b5563'} />
+                                                    <Star key={star} size={14} fill={rev.rating >= star ? '#f59e0b' : 'transparent'} color={rev.rating >= star ? '#f59e0b' : '#d1d5db'} />
                                                 ))}
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Phần bên phải: Menu 3 chấm (Chỉ hiện nếu là đánh giá của chính mình) */}
+                                    {/* Menu 3 chấm (Chỉ chủ nhân) */}
                                     {user?.id === rev.reviewer_id && (
                                         <div style={{ position: 'relative' }}>
                                             <button
                                                 onClick={() => setOpenDropdownId(openDropdownId === rev.id ? null : rev.id)}
-                                                style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px' }}
+                                                style={{ background: 'transparent', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '6px', borderRadius: '50%' }}
+                                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                             >
                                                 <MoreVertical size={20} />
                                             </button>
 
-                                            {/* Khối Dropdown */}
+                                            {/* Dropdown Nền Sáng */}
                                             {openDropdownId === rev.id && (
                                                 <div style={{
                                                     position: 'absolute', right: 0, top: '100%', marginTop: '4px',
-                                                    backgroundColor: '#1f2937', borderRadius: '8px', padding: '4px',
-                                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.5)', zIndex: 10, minWidth: '120px'
+                                                    backgroundColor: '#ffffff', borderRadius: '8px', padding: '4px',
+                                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                                                    zIndex: 10, minWidth: '140px', border: '1px solid #e5e7eb'
                                                 }}>
                                                     <button
                                                         onClick={() => {
                                                             setEditingReviewId(rev.id);
                                                             setEditComment(rev.comment);
                                                             setEditRating(rev.rating);
-                                                            setOpenDropdownId(null); // Đóng menu sau khi bấm
+                                                            setEditSelectedFile(null);
+                                                            setEditPreviewUrl(null);
+                                                            setRemoveExistingMedia(false);
+                                                            setOpenDropdownId(null);
                                                         }}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', cursor: 'pointer', borderRadius: '4px' }}
-                                                        onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', color: '#374151', fontSize: '0.9rem', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}
+                                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
                                                         onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                                     >
                                                         Chỉnh sửa
@@ -1009,11 +1110,11 @@ const ProductDetail = () => {
                                                             handleDeleteReview(rev.id);
                                                             setOpenDropdownId(null);
                                                         }}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.9rem', cursor: 'pointer', borderRadius: '4px' }}
-                                                        onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(239,68,68,0.1)'}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.9rem', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}
+                                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
                                                         onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                                     >
-                                                        Xóa
+                                                        Xóa đánh giá
                                                     </button>
                                                 </div>
                                             )}
@@ -1021,73 +1122,60 @@ const ProductDetail = () => {
                                     )}
                                 </div>
 
-                                {/* Dòng Body: Hiển thị form sửa HOẶC nội dung text + hình ảnh */}
+                                {/* Nội dung đánh giá */}
                                 {editingReviewId === rev.id ? (
-                                    <div style={{ marginTop: '10px' }}>
-                                        {/* Textarea và nút chọn ảnh */}
+                                    <div style={{ marginTop: '12px', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
                                         <div style={{ position: 'relative' }}>
-        <textarea
-            value={editComment}
-            onChange={(e) => setEditComment(e.target.value)}
-            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid var(--border-glass)', outline: 'none', resize: 'vertical' }}
-            rows="3"
-        />
-                                            <label
-                                                style={{ position: 'absolute', bottom: '10px', right: '10px', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px' }}
-                                            >
-                                                <Image size={20} />
+                                <textarea
+                                    value={editComment}
+                                    onChange={(e) => setEditComment(e.target.value)}
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '8px', backgroundColor: '#ffffff', color: '#111827', border: '1px solid #d1d5db', outline: 'none', resize: 'vertical' }}
+                                    rows="3"
+                                    onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                                />
+                                            <label style={{ position: 'absolute', bottom: '12px', right: '12px', cursor: 'pointer', color: '#6b7280', padding: '6px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                                <Image size={18} />
                                                 <input type="file" accept="image/*" onChange={handleEditFileChange} style={{ display: 'none' }} />
                                             </label>
                                         </div>
 
-                                        {/* Hiển thị ảnh cũ (nếu có, và chưa bị xóa, và chưa chọn ảnh mới) */}
+                                        {/* Hiển thị ảnh cũ / ảnh mới khi sửa */}
                                         {rev.media_url && !removeExistingMedia && !editPreviewUrl && (
-                                            <div style={{ marginTop: '8px', position: 'relative', display: 'inline-block' }}>
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Ảnh đính kèm hiện tại:</span>
-                                                <img src={rev.media_url} alt="attached" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', opacity: 0.6 }} />
-                                                <button
-                                                    onClick={() => setRemoveExistingMedia(true)}
-                                                    title="Xóa ảnh này"
-                                                    style={{ position: 'absolute', top: '20px', right: '-5px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
-                                                >×</button>
+                                            <div style={{ marginTop: '12px', position: 'relative', display: 'inline-block' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#6b7280', display: 'block', marginBottom: '6px', fontWeight: '500' }}>Ảnh đính kèm hiện tại:</span>
+                                                <img src={rev.media_url} alt="attached" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb', opacity: 0.8 }} />
+                                                <button onClick={() => setRemoveExistingMedia(true)} style={{ position: 'absolute', top: '24px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>×</button>
                                             </div>
                                         )}
 
-                                        {/* Hiển thị ảnh MỚI xem trước */}
                                         {editPreviewUrl && (
-                                            <div style={{ marginTop: '8px', position: 'relative', display: 'inline-block' }}>
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'block', marginBottom: '4px' }}>Ảnh mới thay thế:</span>
-                                                <img src={editPreviewUrl} alt="Preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
-                                                <button
-                                                    onClick={() => { setEditSelectedFile(null); setEditPreviewUrl(null); }}
-                                                    style={{ position: 'absolute', top: '20px', right: '-5px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
-                                                >×</button>
+                                            <div style={{ marginTop: '12px', position: 'relative', display: 'inline-block' }}>
+                                                <span style={{ fontSize: '0.85rem', color: '#6b7280', display: 'block', marginBottom: '6px', fontWeight: '500' }}>Ảnh mới thay thế:</span>
+                                                <img src={editPreviewUrl} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--primary)' }} />
+                                                <button onClick={() => { setEditSelectedFile(null); setEditPreviewUrl(null); }} style={{ position: 'absolute', top: '24px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>×</button>
                                             </div>
                                         )}
 
-                                        {/* Các nút hành động */}
-                                        <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                                            {/* Truyền thêm rev.media_url vào hàm submit */}
-                                            <button onClick={() => submitEditReview(rev.id, rev.media_url)} style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: 'white', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>Lưu</button>
-                                            <button onClick={() => setEditingReviewId(null)} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>Hủy</button>
+                                        <div style={{ display: 'flex', gap: '12px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+                                            <button onClick={() => setEditingReviewId(null)} style={{ padding: '0.5rem 1.25rem', background: '#ffffff', color: '#374151', borderRadius: '8px', border: '1px solid #d1d5db', cursor: 'pointer', fontWeight: '600' }}>Hủy</button>
+                                            <button onClick={() => submitEditReview(rev.id, rev.media_url)} style={{ padding: '0.5rem 1.25rem', background: 'var(--primary)', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Lưu thay đổi</button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div style={{ marginTop: '8px' }}>
-                                        {/* Nội dung chữ */}
+                                    <div style={{ marginTop: '4px' }}>
                                         {rev.comment && (
-                                            <p style={{ color: 'white', fontSize: '1rem', lineHeight: '1.6', margin: 0 }}>{rev.comment}</p>
+                                            <p style={{ color: '#374151', fontSize: '1rem', lineHeight: '1.6', margin: 0 }}>{rev.comment}</p>
                                         )}
 
-                                        {/* HÌNH ẢNH ĐÍNH KÈM */}
                                         {rev.media_url && (
-                                            <div style={{ marginTop: '12px' }}>
+                                            <div style={{ marginTop: '16px' }}>
                                                 <img
                                                     src={rev.media_url}
                                                     alt="Review attachment"
                                                     style={{
-                                                        maxWidth: '100%', maxHeight: '300px', objectFit: 'contain',
-                                                        borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)'
+                                                        maxWidth: '100%', maxHeight: '320px', objectFit: 'contain',
+                                                        borderRadius: '12px', border: '1px solid #f3f4f6'
                                                     }}
                                                     loading="lazy"
                                                 />
@@ -1095,11 +1183,12 @@ const ProductDetail = () => {
                                         )}
                                     </div>
                                 )}
-
                             </div>
                         ))
                     ) : (
-                        <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontStyle: 'italic' }}>Chưa có đánh giá nào cho sản phẩm này.</p>
+                        <div style={{ textAlign: 'center', padding: '3rem 1rem', backgroundColor: '#f9fafb', borderRadius: '16px', border: '1px dashed #d1d5db' }}>
+                            <p style={{ color: '#6b7280', fontStyle: 'italic', margin: 0 }}>Chưa có đánh giá nào. Hãy là người đầu tiên nhận xét về sản phẩm này!</p>
+                        </div>
                     )}
                 </div>
             </section>
