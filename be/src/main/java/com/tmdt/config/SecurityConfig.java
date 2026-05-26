@@ -31,7 +31,7 @@ public class SecurityConfig {
                 
                 // ADMIN ONLY Routes (Yêu cầu ROLE_ADMIN)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                
+                .requestMatchers("/api/products/admin").hasRole("ADMIN")
                 // Authenticated routes cho User thường
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/chat/**").permitAll()

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Edit, Trash2, Plus, CheckCircle, Search } from 'lucide-react';
 import './Admin.css';
+// 1. THÊM DÒNG IMPORT NÀY VÀO:
+import { supabase } from '../supabaseClient';
 
 const AdminProduct = () => {
     const [products, setProducts] = useState([]);
@@ -10,15 +12,26 @@ const AdminProduct = () => {
     const [totalPages, setTotalPages] = useState(1);
     const limit = 10; // Số sản phẩm trên 1 trang
 
+    // Nếu bạn có file cấu hình supabase (ví dụ: src/supabaseClient.js)
+    // Nhớ import nó vào đầu file AdminProduct.jsx:
+    // import { supabase } from '../supabaseClient'; 
+
     const fetchProducts = async (currentPage) => {
         setLoading(true);
         try {
-            // 1. LẤY TOKEN TỪ LOCALSTORAGE HOẶC CONTEXT
-            // Sửa lại tên key ('access_token') cho đúng với cách bạn lưu token lúc Login
-            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            // Lấy session hiện tại từ Supabase
+            // (Thay thế cho dòng const token = localStorage...)
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-            // Thay đổi domain và port theo server Spring Boot của bạn (thường là 8080)
-            // THÀNH DÒNG NÀY (Đổi chỗ admin và products):
+            const token = session?.access_token;
+
+            if (!token) {
+                console.error("Không tìm thấy token. Vui lòng đăng nhập lại!");
+                alert("Vui lòng đăng nhập bằng tài khoản Admin!");
+                setLoading(false);
+                return; // Dừng luôn không gọi API nữa
+            }
+
             const response = await fetch(`http://localhost:8080/api/products/admin?page=${currentPage}&limit=${limit}`, {
                 method: 'GET',
                 headers: {
@@ -29,12 +42,11 @@ const AdminProduct = () => {
 
             if (response.ok) {
                 const result = await response.json();
-                // Dựa vào cấu trúc PageResponseDTO ở Back-end
                 setProducts(result.content || []);
                 setTotalPages(result.totalPages || 1);
             } else if (response.status === 403) {
-                console.error("Lỗi 403: Không có quyền truy cập. Vui lòng kiểm tra lại token hoặc quyền Admin.");
-                alert("Bạn không có quyền xem danh sách này hoặc phiên đăng nhập đã hết hạn.");
+                console.error("Lỗi 403: Backend từ chối token này.");
+                alert("Tài khoản của bạn không có quyền Admin!");
             } else {
                 console.error("Lỗi server:", response.status);
             }
