@@ -889,7 +889,45 @@ public class SupabaseService {
             System.err.println("Failed to update product price: " + e.getMessage());
         }
     }
+// ==================== ORDERS ====================
 
+    // Lấy danh sách đơn hàng của người mua (Kèm thông tin sản phẩm)
+    public List<Order> getOrdersByBuyer(String buyerId) {
+        // Cú pháp select=*,products(*) sẽ tự động JOIN bảng orders với bảng products
+        String url = supabaseUrl + "/rest/v1/orders?buyer_id=eq." + buyerId + "&select=*,products(*)&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+
+        try {
+            return objectMapper.readValue(response.getBody(), new com.fasterxml.jackson.core.type.TypeReference<List<Order>>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch orders", e);
+        }
+    }
+
+    // Tạo đơn hàng mới
+    public Order createOrder(Map<String, Object> orderData) {
+        String url = supabaseUrl + "/rest/v1/orders";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        try {
+            String body = objectMapper.writeValueAsString(orderData);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class
+            );
+
+            List<Order> orders = objectMapper.readValue(response.getBody(), new com.fasterxml.jackson.core.type.TypeReference<List<Order>>() {});
+            return orders.isEmpty() ? null : orders.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi tạo đơn hàng: " + e.getMessage(), e);
+        }
+    }
     // ==================== HELPERS ====================
 
     private HttpHeaders createHeaders() {

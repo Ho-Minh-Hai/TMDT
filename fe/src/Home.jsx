@@ -105,7 +105,7 @@ const Home = () => {
                         <ul className="sidebar-menu">
                             <li><Link to="/profile" className="sidebar-item">👤 Hồ sơ cá nhân</Link></li>
                             <li><Link to="/wishlist" className="sidebar-item">📌 Danh sách yêu thích</Link></li>
-                            <li><a href="#" className="sidebar-item">⏱️ Lịch sử mua hàng</a></li>
+                            <li><Link to="/purchase-history" className="sidebar-item">⏱️ Lịch sử mua hàng</Link></li>
                         </ul>
                     </div>
 

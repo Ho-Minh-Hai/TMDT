@@ -13,6 +13,7 @@ import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import Admin from './Admin/Admin';
 import Wishlist from './pages/Wishlist';
+import PurchaseHistory from './pages/PurchaseHistory';
 
 /**
  * Protects routes that require authentication.
@@ -145,7 +146,15 @@ function App() {
                             </ProtectedRoute>
                         } 
                     />
-
+                    {/* purchase history page */}
+                    <Route
+                        path="/purchase-history"
+                        element={
+                            <ProtectedRoute>
+                                <PurchaseHistory />
+                            </ProtectedRoute>
+                        }
+                    />
                     {/* Catch-all — redirect based on role */}
                     <Route path="*" element={<CatchAllRedirect />} />
                 </Routes>
