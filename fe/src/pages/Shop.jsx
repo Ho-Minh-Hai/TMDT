@@ -6,7 +6,7 @@ import {
     ShoppingBag, Search, Heart, Filter, Grid, List,
     X, MapPin, Clock, User, LogOut,
     MessageSquare, Package, SlidersHorizontal,
-    Tag, Zap, ArrowUpDown, Eye
+    Tag, Zap, ArrowUpDown, Eye, BookOpen
 } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,7 +50,7 @@ const Shop = () => {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedCondition, setSelectedCondition] = useState('all');
     const [selectedLocation, setSelectedLocation] = useState('all');
-    const [locationSearchTerm, setLocationSearchTerm] = useState('');
+    const [selectedSchool, setSelectedSchool] = useState('all');
     const [sortBy, setSortBy] = useState('newest');
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
     const [showFilters, setShowFilters] = useState(false);
@@ -98,7 +98,7 @@ const Shop = () => {
             if (sellerIds.length > 0) {
                 const { data: profiles } = await supabase
                     .from('profiles')
-                    .select('id, full_name, avatar_url')
+                    .select('id, full_name, avatar_url, school')
                     .in('id', sellerIds);
 
                 const profileMap = {};
@@ -142,6 +142,14 @@ const Shop = () => {
             result = result.filter(p => p.location === selectedLocation);
         }
 
+        // School filter (filter by seller's school)
+        if (selectedSchool !== 'all') {
+            result = result.filter(p => {
+                const seller = sellerProfiles[p.seller_id];
+                return seller && seller.school === selectedSchool;
+            });
+        }
+
         // Price range filter
         if (priceRange.min) {
             result = result.filter(p => p.price >= parseFloat(priceRange.min));
@@ -168,7 +176,7 @@ const Shop = () => {
         }
 
         setFilteredProducts(result);
-    }, [products, searchTerm, selectedCategory, selectedCondition, selectedLocation, sortBy, priceRange]);
+    }, [products, searchTerm, selectedCategory, selectedCondition, selectedLocation, selectedSchool, sortBy, priceRange, sellerProfiles]);
 
     const formatPrice = (price) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
@@ -194,12 +202,12 @@ const Shop = () => {
         setSelectedCategory('all');
         setSelectedCondition('all');
         setSelectedLocation('all');
-        setLocationSearchTerm('');
+        setSelectedSchool('all');
         setSortBy('newest');
         setPriceRange({ min: '', max: '' });
     };
 
-    const hasActiveFilters = selectedCategory !== 'all' || selectedCondition !== 'all' || selectedLocation !== 'all' || priceRange.min || priceRange.max;
+    const hasActiveFilters = selectedCategory !== 'all' || selectedCondition !== 'all' || selectedLocation !== 'all' || selectedSchool !== 'all' || priceRange.min || priceRange.max;
 
     return (
         <div className="shop-page">
@@ -347,36 +355,59 @@ const Shop = () => {
                     {/* Location */}
                     <div className="filter-section">
                         <h4 className="filter-title">Khu vực</h4>
-                        <div className="location-search-input" style={{ marginBottom: '10px' }}>
-                            <input 
-                                type="text" 
-                                placeholder="Tìm khu vực..." 
-                                value={locationSearchTerm}
-                                onChange={e => setLocationSearchTerm(e.target.value)}
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '8px 12px', 
-                                    borderRadius: '8px', 
-                                    border: '1px solid var(--border-glass)', 
-                                    fontSize: '0.85rem',
-                                    outline: 'none',
-                                    background: 'rgba(255, 255, 255, 0.5)'
-                                }}
-                            />
-                        </div>
-                        <div className="filter-options" style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                        <select 
+                            value={selectedLocation}
+                            onChange={e => setSelectedLocation(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--border-glass)',
+                                fontSize: '0.9rem',
+                                background: 'rgba(255, 255, 255, 0.7)',
+                                color: '#111827',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                fontFamily: 'inherit'
+                            }}
+                        >
+                            <option value="all">Tất cả khu vực</option>
                             {['all', ...new Set(products.map(p => p.location).filter(Boolean))]
-                                .filter(loc => loc === 'all' || loc.toLowerCase().includes(locationSearchTerm.toLowerCase()))
+                                .filter(loc => loc !== 'all')
+                                .sort()
                                 .map(loc => (
-                                <button
-                                    key={loc}
-                                    className={`filter-chip ${selectedLocation === loc ? 'active' : ''}`}
-                                    onClick={() => setSelectedLocation(loc)}
-                                >
-                                    {loc === 'all' ? 'Tất cả' : loc}
-                                </button>
+                                <option key={loc} value={loc}>{loc}</option>
                             ))}
-                        </div>
+                        </select>
+                    </div>
+
+                    {/* School */}
+                    <div className="filter-section">
+                        <h4 className="filter-title"><BookOpen size={16} style={{ marginRight: '6px' }} /> Trường đại học</h4>
+                        <select 
+                            value={selectedSchool}
+                            onChange={e => setSelectedSchool(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--border-glass)',
+                                fontSize: '0.9rem',
+                                background: 'rgba(255, 255, 255, 0.7)',
+                                color: '#111827',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                fontFamily: 'inherit'
+                            }}
+                        >
+                            <option value="all">Tất cả trường</option>
+                            {['all', ...new Set(Object.values(sellerProfiles).map(p => p.school).filter(Boolean))]
+                                .filter(school => school !== 'all')
+                                .sort()
+                                .map(school => (
+                                <option key={school} value={school}>{school}</option>
+                            ))}
+                        </select>
                     </div>
                 </aside>
 
