@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Calendar, Camera, Save, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, MessageSquare, Package, LogOut } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Camera, Save, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, MessageSquare, Package, LogOut, BookOpen } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
+import { getUniversitiesList } from '../constants/universities';
 import './Profile.css';
 
 const Profile = () => {
@@ -13,6 +14,7 @@ const Profile = () => {
     const [formData, setFormData] = useState({
         full_name: '',
         phone: '',
+        school: '',
         avatar_url: ''
     });
     const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +29,7 @@ const Profile = () => {
             setFormData({
                 full_name: profile.full_name || '',
                 phone: profile.phone || '',
+                school: profile.school || '',
                 avatar_url: profile.avatar_url || ''
             });
         }
@@ -98,7 +101,8 @@ const Profile = () => {
 
         const { error } = await updateProfile({
             full_name: formData.full_name,
-            phone: formData.phone, 
+            phone: formData.phone,
+            school: formData.school,
             avatar_url: formData.avatar_url
         });
 
@@ -264,6 +268,24 @@ const Profile = () => {
                                     disabled={!isEditing}
                                     placeholder="Nhập số điện thoại"
                                 />
+                            </div>
+
+                            <div className="form-group">
+                                <label><BookOpen size={16} /> Trường đại học</label>
+                                <select 
+                                    name="school"
+                                    value={formData.school}
+                                    onChange={handleChange}
+                                    disabled={!isEditing}
+                                    className="school-select"
+                                >
+                                    <option value="">-- Chọn trường đại học --</option>
+                                    {getUniversitiesList().map((university) => (
+                                        <option key={university} value={university}>
+                                            {university}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="form-group">
