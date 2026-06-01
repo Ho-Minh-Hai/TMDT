@@ -125,25 +125,6 @@ const Home = () => {
                         </ul>
                     </div>
 
-                    <div className="sidebar-section">
-                        <h3 className="sidebar-title">LỌC GIÁ</h3>
-                        <div className="price-range">
-                            <input type="range" min="0" max="1000" className="price-slider" />
-                            <div className="price-inputs">
-                                <input type="number" placeholder="Min" className="price-input" />
-                                <span>-</span>
-                                <input type="number" placeholder="Max" className="price-input" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="sidebar-section">
-                        <h3 className="sidebar-title">TÌM KIẾM</h3>
-                        <div className="search-box">
-                            <Search size={18} />
-                            <input type="text" placeholder="Tìm sản phẩm..." className="search-input" />
-                        </div>
-                    </div>
                 </aside>
 
                 {/* Main Content */}
