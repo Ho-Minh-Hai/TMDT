@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './supabaseClient';
-import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare, Package, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare, Package, ChevronRight, Sparkles } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
@@ -13,6 +13,7 @@ const Home = () => {
     const [products, setProducts] = useState([]);
     const [sellerProfiles, setSellerProfiles] = useState({});
     const [loading, setLoading] = useState(true);
+    const [boostedIds, setBoostedIds] = useState([]);
 
     const categories = [
         { id: 'all', name: 'Tất cả', icon: '📦' },
@@ -27,6 +28,9 @@ const Home = () => {
         const fetchProducts = async () => {
             setLoading(true);
             try {
+                const storedBoosted = JSON.parse(localStorage.getItem('boosted_products') || '[]');
+                setBoostedIds(storedBoosted);
+
                 const { data, error } = await supabase
                     .from('products')
                     .select('*')
@@ -36,7 +40,16 @@ const Home = () => {
 
                 if (error) throw error;
 
-                setProducts(data || []);
+                // Sort so boosted items come first
+                const sorted = (data || []).sort((a, b) => {
+                    const aBoosted = storedBoosted.includes(a.id);
+                    const bBoosted = storedBoosted.includes(b.id);
+                    if (aBoosted && !bBoosted) return -1;
+                    if (!aBoosted && bBoosted) return 1;
+                    return 0;
+                });
+
+                setProducts(sorted);
 
                 // Fetch seller profiles for all unique seller IDs
                 const sellerIds = [...new Set((data || []).map(p => p.seller_id).filter(Boolean))];
@@ -106,6 +119,7 @@ const Home = () => {
                             <li><Link to="/profile" className="sidebar-item">👤 Hồ sơ cá nhân</Link></li>
                             <li><Link to="/wishlist" className="sidebar-item">📌 Danh sách yêu thích</Link></li>
                             <li><Link to="/purchase-history" className="sidebar-item">⏱️ Lịch sử mua hàng</Link></li>
+                            <li><Link to="/vip-member" className="sidebar-item">👑 Vip member</Link></li>
                         </ul>
                     </div>
 
@@ -181,8 +195,15 @@ const Home = () => {
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center',
                                     }}
+                                    onClick={() => navigate(`/product/${product.id}`)}
                                 >
                                     <div className="product-overlay"></div>
+                                    {boostedIds.includes(product.id) && (
+                                        <span className="sponsored-badge-home">
+                                            <Sparkles size={12} />
+                                            <span>Được tài trợ</span>
+                                        </span>
+                                    )}
                                     <div className="product-content">
                                         <h3 className="product-title">{product.name}</h3>
                                         <p className="product-seller">

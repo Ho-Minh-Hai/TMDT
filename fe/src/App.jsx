@@ -13,6 +13,7 @@ import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import Wishlist from './pages/Wishlist';
 import PurchaseHistory from './pages/PurchaseHistory';
+import VipMember from './pages/VipMember';
 
 /**
  * Protects routes that require authentication.
@@ -95,6 +96,16 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <Profile />
+                            </ProtectedRoute>
+                        } 
+                    />
+
+                    {/* Vip member page */}
+                    <Route 
+                        path="/vip-member" 
+                        element={
+                            <ProtectedRoute>
+                                <VipMember />
                             </ProtectedRoute>
                         } 
                     />
