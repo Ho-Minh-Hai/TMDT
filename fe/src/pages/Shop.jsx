@@ -6,7 +6,7 @@ import {
     ShoppingBag, Search, Heart, Filter, Grid, List,
     X, MapPin, Clock, User, LogOut,
     MessageSquare, Package, SlidersHorizontal,
-    Tag, Zap, ArrowUpDown, Eye, BookOpen
+    Tag, Zap, ArrowUpDown, Eye, BookOpen, Sparkles
 } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +46,7 @@ const Shop = () => {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [boostedIds, setBoostedIds] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedCondition, setSelectedCondition] = useState('all');
@@ -79,6 +80,14 @@ const Shop = () => {
     // Fetch all available products from Supabase directly
     useEffect(() => {
         fetchProducts();
+        const stored = localStorage.getItem('boosted_products');
+        if (stored) {
+            try {
+                setBoostedIds(JSON.parse(stored));
+            } catch (e) {
+                console.error(e);
+            }
+        }
     }, []);
 
     const fetchProducts = async () => {
@@ -174,6 +183,16 @@ const Shop = () => {
                 result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 break;
         }
+
+        // Boosted/Sponsored listings prioritization to the top
+        const boostedIds = JSON.parse(localStorage.getItem('boosted_products') || '[]');
+        result.sort((a, b) => {
+            const aBoosted = boostedIds.includes(a.id);
+            const bBoosted = boostedIds.includes(b.id);
+            if (aBoosted && !bBoosted) return -1;
+            if (!aBoosted && bBoosted) return 1;
+            return 0;
+        });
 
         setFilteredProducts(result);
     }, [products, searchTerm, selectedCategory, selectedCondition, selectedLocation, selectedSchool, sortBy, priceRange, sellerProfiles]);
@@ -509,6 +528,12 @@ const Shop = () => {
                                         onMouseLeave={() => setHoveredProduct(null)}
                                     >
                                         <div className="shop-card-image">
+                                            {boostedIds.includes(product.id) && (
+                                                <span className="sponsored-badge-shop">
+                                                    <Sparkles size={11} />
+                                                    <span>Được tài trợ</span>
+                                                </span>
+                                            )}
                                             {product.image_url ? (
                                                 <img src={product.image_url} alt={product.name} loading="lazy" />
                                             ) : (
