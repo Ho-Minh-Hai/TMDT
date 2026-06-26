@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Calendar, Camera, Save, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, MessageSquare, Package, LogOut, BookOpen } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Camera, Save, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, MessageSquare, Package, LogOut, BookOpen, Star } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +22,8 @@ const Profile = () => {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [avgRating, setAvgRating] = useState(null);
+    const [ratingCount, setRatingCount] = useState(0);
     const fileInputRef = React.useRef(null);
 
     useEffect(() => {
@@ -34,6 +37,48 @@ const Profile = () => {
             });
         }
     }, [profile]);
+
+    // Fetch average rating from reviews via user's products
+    useEffect(() => {
+        const fetchAvgRating = async () => {
+            if (!user?.id) return;
+            try {
+                // Get all product IDs belonging to this user (seller_id is the correct column)
+                const { data: products, error: prodError } = await supabase
+                    .from('products')
+                    .select('id')
+                    .eq('seller_id', user.id);
+
+                if (prodError || !products || products.length === 0) {
+                    setAvgRating(null);
+                    setRatingCount(0);
+                    return;
+                }
+
+                const productIds = products.map(p => p.id);
+
+                // Get all reviews for those products
+                const { data: reviews, error: revError } = await supabase
+                    .from('reviews')
+                    .select('rating')
+                    .in('product_id', productIds);
+
+                if (revError || !reviews || reviews.length === 0) {
+                    setAvgRating(null);
+                    setRatingCount(0);
+                    return;
+                }
+
+                const total = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+                setAvgRating((total / reviews.length).toFixed(1));
+                setRatingCount(reviews.length);
+            } catch (err) {
+                console.error('Lỗi lấy đánh giá:', err);
+            }
+        };
+
+        fetchAvgRating();
+    }, [user]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -296,6 +341,31 @@ const Profile = () => {
                                     disabled 
                                     className="disabled-input"
                                 />
+                            </div>
+
+                            <div className="form-group">
+                                <label><Star size={16} /> Đánh giá</label>
+                                <div className="rating-display disabled-input">
+                                    {avgRating !== null ? (
+                                        <>
+                                            <span className="rating-stars">
+                                                {[1,2,3,4,5].map(s => (
+                                                    <Star
+                                                        key={s}
+                                                        size={18}
+                                                        className={parseFloat(avgRating) >= s ? 'star-filled' : 'star-empty'}
+                                                        fill={parseFloat(avgRating) >= s ? '#f59e0b' : 'none'}
+                                                        color={parseFloat(avgRating) >= s ? '#f59e0b' : '#d1d5db'}
+                                                    />
+                                                ))}
+                                            </span>
+                                            <span className="rating-value">{avgRating} / 5</span>
+                                            <span className="rating-count">({ratingCount} đánh giá)</span>
+                                        </>
+                                    ) : (
+                                        <span className="rating-none">Chưa có đánh giá</span>
+                                    )}
+                                </div>
                             </div>
 
                         </div>
