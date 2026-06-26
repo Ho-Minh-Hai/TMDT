@@ -14,6 +14,7 @@ import ProductDetail from './pages/ProductDetail';
 import Wishlist from './pages/Wishlist';
 import PurchaseHistory from './pages/PurchaseHistory';
 import VipMember from './pages/VipMember';
+import UserProfile from './pages/UserProfile';
 
 /**
  * Protects routes that require authentication.
@@ -154,6 +155,15 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <PurchaseHistory />
+                            </ProtectedRoute>
+                        }
+                    />
+                    {/* User public profile page */}
+                    <Route
+                        path="/user/:id"
+                        element={
+                            <ProtectedRoute>
+                                <UserProfile />
                             </ProtectedRoute>
                         }
                     />

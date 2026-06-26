@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { getUniversitiesList } from '../constants/universities';
+import UserSearchBar from '../components/UserSearchBar';
 import './Profile.css';
 
 const Profile = () => {
@@ -200,6 +201,7 @@ const Profile = () => {
                         <Package size={20} />
                     </Link>
                 </div>
+                <UserSearchBar />
 
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
