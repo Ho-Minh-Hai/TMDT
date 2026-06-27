@@ -191,15 +191,10 @@ const Profile = () => {
                 </button>
 
                 <div className="nav-links">
-                    <a href="#" className="nav-link">Bộ sưu tập</a>
-                    <a href="#" className="nav-link">Ưu đãi</a>
-                    <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
                 <UserSearchBar />
 

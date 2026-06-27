@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import UserSearchBar from '../components/UserSearchBar';
 import { supabase } from '../supabaseClient';
 import {
     ShoppingBag, Search, Heart, Filter, Grid, List,
@@ -242,40 +243,12 @@ const Shop = () => {
                 </Link>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Bộ sưu tập</Link>
-                    <a href="#" className="nav-link">Ưu đãi</a>
-                    <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/wishlist" className="nav-icon-link" title="Yêu thích" style={{ position: 'relative' }}>
-                        <Heart size={20} />
-                        {wishlistCount > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-4px',
-                                right: '-4px',
-                                background: '#ef4444',
-                                color: 'white',
-                                fontSize: '0.65rem',
-                                fontWeight: '700',
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                lineHeight: 1,
-                            }}>
-                                {wishlistCount}
-                            </span>
-                        )}
-                    </Link>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
@@ -323,31 +296,6 @@ const Shop = () => {
                         </div>
                     </div>
 
-                    {/* Price Range */}
-                    <div className="filter-section">
-                        <h4 className="filter-title">Khoảng giá</h4>
-                        <div className="price-filter-inputs">
-                            <input
-                                type="number"
-                                placeholder="Từ"
-                                value={priceRange.min}
-                                onChange={e => setPriceRange(p => ({ ...p, min: e.target.value }))}
-                            />
-                            <span className="price-separator">—</span>
-                            <input
-                                type="number"
-                                placeholder="Đến"
-                                value={priceRange.max}
-                                onChange={e => setPriceRange(p => ({ ...p, max: e.target.value }))}
-                            />
-                        </div>
-                        <div className="quick-prices">
-                            <button onClick={() => setPriceRange({ min: '', max: '100000' })}>Dưới 100k</button>
-                            <button onClick={() => setPriceRange({ min: '100000', max: '500000' })}>100k–500k</button>
-                            <button onClick={() => setPriceRange({ min: '500000', max: '2000000' })}>500k–2tr</button>
-                            <button onClick={() => setPriceRange({ min: '2000000', max: '' })}>Trên 2tr</button>
-                        </div>
-                    </div>
 
                     {/* Condition */}
                     <div className="filter-section">
@@ -402,7 +350,7 @@ const Shop = () => {
 
                     {/* School */}
                     <div className="filter-section">
-                        <h4 className="filter-title"><BookOpen size={16} style={{ marginRight: '6px' }} /> Trường đại học</h4>
+                        <h4 className="filter-title"> Trường đại học</h4>
                         <select 
                             value={selectedSchool}
                             onChange={e => setSelectedSchool(e.target.value)}
