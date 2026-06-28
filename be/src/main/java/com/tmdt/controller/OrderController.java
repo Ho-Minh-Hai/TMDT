@@ -35,32 +35,41 @@ public class OrderController {
         return ResponseEntity.ok(myOrders);
     }
 
-    // API dành cho Người mua xác nhận đã nhận hàng bằng tiền mặt
-    @PostMapping("/confirm-purchase/{productId}")
-    public ResponseEntity<?> confirmPurchase(@PathVariable String productId, @AuthenticationPrincipal UserPrincipal principal) {
+    // API dành cho Người bán xác nhận giao dịch và tạo đơn cho Người mua
+    @PostMapping("/seller-confirm/{productId}")
+    public ResponseEntity<?> sellerConfirmSale(
+            @PathVariable String productId,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
         if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Chưa đăng nhập");
+
+        String buyerId = payload.get("buyerId");
+        if (buyerId == null || buyerId.isEmpty()) {
+            return ResponseEntity.badRequest().body("Thiếu ID người mua!");
+        }
 
         try {
             // 1. Lấy thông tin sản phẩm
             Product product = supabaseService.getProduct(productId);
             if (product == null) return ResponseEntity.notFound().build();
 
-            // 2. Chống gian lận: Chỉ cho phép xác nhận mua khi người bán ĐÃ đánh dấu 'sold'
-            if (!"sold".equals(product.getStatus())) {
-                return ResponseEntity.badRequest().body("Người bán chưa xác nhận bán sản phẩm này!");
+            // 2. Chống gian lận: Chỉ CHỦ SẢN PHẨM mới có quyền gọi API này
+            if (!product.getSellerId().equals(principal.getUserId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Chỉ người bán mới có quyền xác nhận giao dịch!");
             }
 
-            // 3. Chống gian lận: Không cho phép người bán tự mua hàng của mình
-            if (product.getSellerId().equals(principal.getUserId())) {
-                return ResponseEntity.badRequest().body("Bạn không thể tự mua sản phẩm của chính mình!");
+            // 3. (Tùy chọn) Chống người bán tự nhập ID của chính mình
+            if (buyerId.equals(principal.getUserId())) {
+                return ResponseEntity.badRequest().body("Bạn không thể tự bán cho chính mình!");
             }
 
-            // 4. Tạo lịch sử mua hàng
+            // 4. Tạo lịch sử mua hàng cho người mua
             Map<String, Object> orderData = new HashMap<>();
-            orderData.put("buyer_id", principal.getUserId());
+            orderData.put("buyer_id", buyerId);
             orderData.put("product_id", productId);
             orderData.put("amount", product.getPrice());
-            orderData.put("status", "completed"); // Đã giao dịch tiền mặt xong
+            orderData.put("status", "completed");
 
             Order savedOrder = supabaseService.createOrder(orderData);
             return ResponseEntity.ok(savedOrder);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import UserSearchBar from '../components/UserSearchBar';
 import { supabase } from '../supabaseClient';
 import {
     ShoppingBag, MapPin, Clock, User, LogOut,
@@ -62,6 +63,14 @@ const ProductDetail = () => {
     const [editSelectedFile, setEditSelectedFile] = useState(null);
     const [editPreviewUrl, setEditPreviewUrl] = useState(null);
     const [removeExistingMedia, setRemoveExistingMedia] = useState(false);
+
+    // -- State cho Xác nhận giao dịch (Người bán) --
+    const [buyerSearchTerm, setBuyerSearchTerm] = useState(''); // Chứa nội dung text đang gõ
+    const [buyerSuggestions, setBuyerSuggestions] = useState([]); // Chứa danh sách gợi ý
+    const [selectedBuyer, setSelectedBuyer] = useState(null); // Chứa user đã được chọn
+    const [showSuggestions, setShowSuggestions] = useState(false); // Ẩn/hiện khung Auto-complete
+    const [isConfirmingSale, setIsConfirmingSale] = useState(false);
+
     useEffect(() => {
         if (id) {
             fetchProduct();
@@ -234,6 +243,7 @@ const ProductDetail = () => {
             setIsUploading(false);
         }
     };
+
     const handleDeleteReview = async (reviewId) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) return;
         try {
@@ -306,6 +316,7 @@ const ProductDetail = () => {
             console.error(error);
         }
     };
+
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -321,6 +332,7 @@ const ProductDetail = () => {
         setPreviewUrl(URL.createObjectURL(file));
         setReviewError('');
     };
+
     const uploadImage = async (file) => {
         if (!file) return null;
 
@@ -347,6 +359,7 @@ const ProductDetail = () => {
             throw new Error('Không thể tải ảnh lên.');
         }
     };
+
     // ==================== HELPERS ====================
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
 
@@ -458,12 +471,12 @@ const ProductDetail = () => {
 
     const handleToggleSoldStatus = async () => {
         if (!user || !product || product.seller_id !== user.id) return;
-        
+
         try {
             const token = await getAccessToken();
             const response = await fetch(`http://localhost:8080/api/products/${product.id}/toggle-status`, {
                 method: 'PATCH',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
@@ -484,14 +497,14 @@ const ProductDetail = () => {
 
     const handleToggleWishlist = async () => {
         if (!user) {
-            setWishlistToast({ msg: 'Vui l\u00f2ng \u0111\u0103ng nh\u1eadp \u0111\u1ec3 y\u00eau th\u00edch!', type: 'error' });
+            setWishlistToast({ msg: 'Vui lòng đăng nhập để yêu thích!', type: 'error' });
             setTimeout(() => setWishlistToast(null), 2500);
             return;
         }
         const result = await toggleWishlist(id);
         if (result.success) {
             setWishlistToast({
-                msg: result.added ? '\u2764\ufe0f \u0110\u00e3 th\u00eam v\u00e0o y\u00eau th\u00edch!' : '\ud83d\udc94 \u0110\u00e3 x\u00f3a kh\u1ecfi y\u00eau th\u00edch!',
+                msg: result.added ? '❤️ Đã thêm vào yêu thích!' : '💔 Đã xóa khỏi yêu thích!',
                 type: result.added ? 'success' : 'info'
             });
             setTimeout(() => setWishlistToast(null), 2000);
@@ -504,6 +517,106 @@ const ProductDetail = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    // ==================== XỬ LÝ XÁC NHẬN BÁN HÀNG CỦA SELLER ====================
+    // Hàm gọi Supabase để tìm user theo tên mỗi khi gõ phím
+    const handleSearchBuyerChange = async (e) => {
+        const val = e.target.value;
+        setBuyerSearchTerm(val);
+        setSelectedBuyer(null); // Reset người đã chọn nếu gõ lại tên khác
+
+        if (!val.trim()) {
+            setBuyerSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        try {
+            // Tìm kiếm trong bảng profiles (không phân biệt hoa thường)
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .ilike('full_name', `%${val}%`)
+                .limit(5); // Lấy tối đa 5 người
+
+            if (!error && data) {
+                setBuyerSuggestions(data);
+                setShowSuggestions(true);
+            }
+        } catch (err) {
+            console.error("Lỗi tìm kiếm người dùng", err);
+        }
+    };
+
+    // Hàm khi click chọn 1 người từ danh sách gợi ý
+    const handleSelectBuyer = (buyer) => {
+        setSelectedBuyer(buyer);
+        setBuyerSearchTerm(buyer.full_name); // Đẩy tên lên ô input
+        setShowSuggestions(false); // Đóng menu
+    };
+    // ==================== XỬ LÝ XÁC NHẬN BÁN HÀNG CỦA SELLER ====================
+    const handleSellerConfirmSale = async () => {
+        if (!selectedBuyer || !selectedBuyer.id) {
+            alert("Vui lòng chọn người mua từ danh sách gợi ý!");
+            return;
+        }
+
+        if (!window.confirm(`Xác nhận tạo hóa đơn và gửi tin nhắn cho "${selectedBuyer.full_name}"?`)) return;
+
+        setIsConfirmingSale(true);
+        try {
+            const token = await getAccessToken();
+
+            // Bước 1: Gọi API tạo Lịch sử mua hàng cho người mua
+            const orderRes = await fetch(`http://localhost:8080/api/orders/seller-confirm/${product.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ buyerId: selectedBuyer.id }) // Gửi ID ngầm
+            });
+
+            if (!orderRes.ok) {
+                const errText = await orderRes.text();
+                throw new Error(errText);
+            }
+
+            // Bước 2: Tự động gửi tin nhắn cho người mua qua Chat
+            const convRes = await fetch('http://localhost:8080/api/chat/conversations/get-or-create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user1_id: user.id, user2_id: selectedBuyer.id })
+            });
+
+            if (convRes.ok) {
+                const conversation = await convRes.json();
+                const formatVND = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+
+                const msgContent = `🎉 XÁC NHẬN GIAO DỊCH THÀNH CÔNG!\n\nSản phẩm: "${product.name}"\nSố tiền: ${formatVND(product.price)}\n\nCảm ơn bạn đã mua hàng. Hóa đơn đã được lưu vào Lịch sử mua hàng của bạn!`;
+
+                await fetch('http://localhost:8080/api/chat/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        conversation_id: conversation.id,
+                        sender_id: user.id,
+                        content: msgContent,
+                        message_type: 'system'
+                    })
+                });
+            }
+
+            alert("Giao dịch hoàn tất! Đã lưu hóa đơn và gửi tin nhắn cho người mua.");
+            // Reset form
+            setBuyerSearchTerm('');
+            setSelectedBuyer(null);
+        } catch (error) {
+            console.error("Lỗi xác nhận:", error);
+            alert("Lỗi: " + error.message);
+        } finally {
+            setIsConfirmingSale(false);
+        }
+    };
 
     const images = product?.image_url ? [product.image_url] : [];
 
@@ -534,27 +647,7 @@ const ProductDetail = () => {
     }
 
     const conditionInfo = CONDITIONS_MAP[product.condition] || { label: product.condition, color: '#6b7280' };
-    const handleConfirmPurchase = async () => {
-        if (!window.confirm("Bạn xác nhận là mình đã mua, thanh toán và nhận sản phẩm này thành công chứ?")) return;
 
-        try {
-            const token = await getAccessToken();
-            const response = await fetch(`http://localhost:8080/api/orders/confirm-purchase/${product.id}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                alert("Giao dịch thành công! Đã lưu vào Lịch sử mua hàng của bạn.");
-                navigate('/purchase-history'); // Chuyển hướng sang trang lịch sử
-            } else {
-                const errorText = await response.text();
-                alert(errorText || "Có lỗi xảy ra, vui lòng thử lại!");
-            }
-        } catch (error) {
-            console.error("Lỗi xác nhận mua hàng:", error);
-        }
-    };
     return (
         <div className="detail-page">
             <div className="bg-mesh"></div>
@@ -625,40 +718,12 @@ const ProductDetail = () => {
                 </Link>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Bộ sưu tập</Link>
-                    <a href="#" className="nav-link">Ưu đãi</a>
-                    <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/wishlist" className="nav-icon-link" title="Yêu thích" style={{ position: 'relative' }}>
-                        <Heart size={20} />
-                        {wishlistCount > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-4px',
-                                right: '-4px',
-                                background: '#ef4444',
-                                color: 'white',
-                                fontSize: '0.65rem',
-                                fontWeight: '700',
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                lineHeight: 1,
-                            }}>
-                                {wishlistCount}
-                            </span>
-                        )}
-                    </Link>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
@@ -732,8 +797,8 @@ const ProductDetail = () => {
 
                     <div className="detail-actions">
                         {user && seller && seller.id === user.id ? (
-                            <button 
-                                className={`btn-toggle-sold ${product.status === 'sold' ? 'is-sold' : ''}`} 
+                            <button
+                                className={`btn-toggle-sold ${product.status === 'sold' ? 'is-sold' : ''}`}
                                 onClick={handleToggleSoldStatus}
                                 style={{
                                     flex: 1,
@@ -786,8 +851,9 @@ const ProductDetail = () => {
                             <DollarSign size={20} /> Đề xuất giá
                         </button>
                     )}
-                    {/* nút xác nhận đã mua */}
-                    {product.status === 'sold' && user && seller && user.id !== seller.id && (
+
+                    {/* KHU VỰC XÁC NHẬN NGƯỜI MUA (CHỈ DÀNH CHO NGƯỜI BÁN) */}
+                    {product.status === 'sold' && user && seller && user.id === seller.id && (
                         <motion.div
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -800,51 +866,83 @@ const ProductDetail = () => {
                                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.06)'
                             }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.75rem' }}>
                                 <div style={{ padding: '6px', backgroundColor: '#bbf7d0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <CheckCircle size={18} color="#16a34a" />
+                                    <Package size={18} color="#16a34a" />
                                 </div>
                                 <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#14532d' }}>
-                                    Xác nhận giao dịch thành công?
+                                    Hoàn tất đơn hàng
                                 </h4>
                             </div>
 
                             <p style={{ margin: '0 0 1rem 0', fontSize: '0.88rem', color: '#166534', lineHeight: '1.5' }}>
-                                Nếu bạn đã gặp người bán, thanh toán tiền mặt và nhận hàng thành công, hãy bấm xác nhận để lưu lại hóa đơn vào lịch sử mua hàng.
+                                Để sản phẩm được ghi nhận vào lịch sử của người mua, vui lòng copy ID của họ (trong phần Chat) và dán vào đây:
                             </p>
 
-                            <button
-                                onClick={handleConfirmPurchase}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.85rem',
-                                    backgroundColor: '#10b981',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    cursor: 'pointer',
-                                    fontWeight: '600',
-                                    fontSize: '0.95rem',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    transition: 'all 0.2s ease',
-                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#059669';
-                                    e.target.style.transform = 'translateY(-1px)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#10b981';
-                                    e.target.style.transform = 'translateY(0)';
-                                }}
-                            >
-                                <ShoppingBag size={18} /> Xác nhận tôi đã mua hàng
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {/* Ô Auto-complete */}
+                                <div style={{ position: 'relative', flex: '1', minWidth: '220px' }}>
+                                    <input
+                                        type="text"
+                                        value={buyerSearchTerm}
+                                        onChange={handleSearchBuyerChange}
+                                        placeholder="Gõ tên người mua để tìm kiếm..."
+                                        style={{
+                                            width: '100%', padding: '0.75rem', boxSizing: 'border-box',
+                                            borderRadius: '10px', border: '1px solid #a7f3d0',
+                                            outline: 'none', color: '#064e3b', backgroundColor: '#ffffff'
+                                        }}
+                                    />
+
+                                    {/* Khung Dropdown gợi ý người dùng */}
+                                    {showSuggestions && (
+                                        <div style={{
+                                            position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                                            backgroundColor: 'white', borderRadius: '10px', border: '1px solid #e5e7eb',
+                                            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden'
+                                        }}>
+                                            {buyerSuggestions.length > 0 ? (
+                                                buyerSuggestions.map(b => (
+                                                    <div
+                                                        key={b.id}
+                                                        onClick={() => handleSelectBuyer(b)}
+                                                        style={{
+                                                            padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px',
+                                                            cursor: 'pointer', borderBottom: '1px solid #f3f4f6', transition: 'background 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                    >
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f3f4f6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {b.avatar_url ? <img src={b.avatar_url} alt="avt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={18} color="#9ca3af" />}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.9rem', color: '#374151', fontWeight: '600' }}>{b.full_name || 'Người dùng ẩn danh'}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div style={{ padding: '12px', textAlign: 'center', fontSize: '0.85rem', color: '#6b7280' }}>
+                                                    Không tìm thấy người dùng phù hợp.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleSellerConfirmSale}
+                                    disabled={isConfirmingSale}
+                                    style={{
+                                        padding: '0.75rem 1.25rem', backgroundColor: '#10b981', color: 'white',
+                                        border: 'none', borderRadius: '10px', cursor: 'pointer',
+                                        fontWeight: '600', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px',
+                                        opacity: isConfirmingSale ? 0.7 : 1
+                                    }}
+                                >
+                                    <CheckCircle size={18} /> {isConfirmingSale ? 'Đang xử lý...' : 'Xác nhận'}
+                                </button>
+                            </div>
                         </motion.div>
                     )}
+
                     {seller && (
                         <div className="detail-seller-card">
                             <div className="seller-card-header"><h3>Thông tin người bán</h3></div>
@@ -1326,7 +1424,7 @@ const ProductDetail = () => {
                 </div>
             </footer>
 
-            {/* Toast th\u00f4ng b\u00e1o Wishlist */}
+            {/* Toast thông báo Wishlist */}
             <AnimatePresence>
                 {wishlistToast && (
                     <motion.div

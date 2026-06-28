@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import UserSearchBar from "./components/UserSearchBar";
 import { supabase } from './supabaseClient';
 import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare, Package, ChevronRight, Sparkles } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
@@ -17,13 +18,13 @@ const Home = () => {
 
     const categories = [
         { id: 'all', name: 'Tất cả', icon: '📦' },
-        { id: 'electronics', name: 'Điện tử & Máy tính', icon: '💻' },
-        { id: 'fashion', name: 'Thời trang', icon: '👕' },
-        { id: 'home', name: 'Nhà & Ngoài trời', icon: '🏠' },
-        { id: 'sports', name: 'Thể thao & Ngoài trời', icon: '⚽' },
+        { id: 'Điện tử', name: 'Điện tử & Máy tính', icon: '💻' },
+        { id: 'Quần áo', name: 'Thời trang', icon: '👕' },
+        { id: 'Đồ gia dụng', name: 'Nhà & Ngoài trời', icon: '🏠' },
+        { id: 'Thể thao', name: 'Thể thao & Ngoài trời', icon: '⚽' },
     ];
 
-    // Fetch 6 latest products from Supabase
+    // Fetch products from Supabase based on category
     useEffect(() => {
         const fetchProducts = async () => {
             setLoading(true);
@@ -31,12 +32,22 @@ const Home = () => {
                 const storedBoosted = JSON.parse(localStorage.getItem('boosted_products') || '[]');
                 setBoostedIds(storedBoosted);
 
-                const { data, error } = await supabase
+                // Start building the query
+                let query = supabase
                     .from('products')
                     .select('*')
-                    .eq('status', 'available')
-                    .order('created_at', { ascending: false })
-                    .limit(6);
+                    .eq('status', 'available');
+
+                // Add category filter if not 'all'
+                if (selectedCategory !== 'all') {
+                    query = query.eq('category', selectedCategory);
+                }
+
+                // Add ordering and limit
+                query = query.order('created_at', { ascending: false }).limit(6);
+
+                // Execute the query
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -62,6 +73,8 @@ const Home = () => {
                     const profileMap = {};
                     (profiles || []).forEach(p => { profileMap[p.id] = p; });
                     setSellerProfiles(profileMap);
+                } else {
+                    setSellerProfiles({});
                 }
             } catch (err) {
                 console.error('Error fetching products:', err);
@@ -71,7 +84,7 @@ const Home = () => {
         };
 
         fetchProducts();
-    }, []);
+    }, [selectedCategory]);
 
     return (
         <div className="home-container">
@@ -90,17 +103,12 @@ const Home = () => {
                 </button>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
-                    <Link to="/shop?filter=deals" className="nav-link">Ưu đãi</Link>
-                    <Link to="/shop?filter=trending" className="nav-link">Xu hướng</Link>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
@@ -116,10 +124,10 @@ const Home = () => {
                     <div className="sidebar-section">
                         <h3 className="sidebar-title">QUẢN LÝ TÀI KHOẢN</h3>
                         <ul className="sidebar-menu">
-                            <li><Link to="/profile" className="sidebar-item">👤 Hồ sơ cá nhân</Link></li>
-                            <li><Link to="/wishlist" className="sidebar-item">📌 Danh sách yêu thích</Link></li>
-                            <li><Link to="/purchase-history" className="sidebar-item">⏱️ Lịch sử mua hàng</Link></li>
-                            <li><Link to="/vip-member" className="sidebar-item">👑 Vip member</Link></li>
+                            <li><Link to="/profile" className="sidebar-item"> Hồ sơ cá nhân</Link></li>
+                            <li><Link to="/wishlist" className="sidebar-item"> Danh sách yêu thích</Link></li>
+                            <li><Link to="/purchase-history" className="sidebar-item"> Lịch sử mua hàng</Link></li>
+                            <li><Link to="/vip-member" className="sidebar-item"> Vip member</Link></li>
                         </ul>
                     </div>
 
