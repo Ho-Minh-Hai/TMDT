@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../hooks/useWishlist';
+import UserSearchBar from '../components/UserSearchBar';
 import {
     ShoppingBag, Heart, User, LogOut, MessageSquare,
     Package, MapPin, Clock, Trash2, ShoppingCart, X
@@ -75,21 +76,12 @@ const Wishlist = () => {
                 </Link>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
-                    <Link to="/wishlist" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>
-                        Yêu thích
-                        {wishlistCount > 0 && (
-                            <span className="wishlist-nav-badge">{wishlistCount}</span>
-                        )}
-                    </Link>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>

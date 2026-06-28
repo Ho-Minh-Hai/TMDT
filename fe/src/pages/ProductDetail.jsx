@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import UserSearchBar from '../components/UserSearchBar';
 import { supabase } from '../supabaseClient';
 import {
     ShoppingBag, MapPin, Clock, User, LogOut,
@@ -625,40 +626,12 @@ const ProductDetail = () => {
                 </Link>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link" style={{ color: 'var(--primary)', fontWeight: '600' }}>Bộ sưu tập</Link>
-                    <a href="#" className="nav-link">Ưu đãi</a>
-                    <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/wishlist" className="nav-icon-link" title="Yêu thích" style={{ position: 'relative' }}>
-                        <Heart size={20} />
-                        {wishlistCount > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-4px',
-                                right: '-4px',
-                                background: '#ef4444',
-                                color: 'white',
-                                fontSize: '0.65rem',
-                                fontWeight: '700',
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                lineHeight: 1,
-                            }}>
-                                {wishlistCount}
-                            </span>
-                        )}
-                    </Link>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>

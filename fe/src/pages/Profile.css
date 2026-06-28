@@ -290,6 +290,46 @@
     cursor: not-allowed;
 }
 
+/* Rating display */
+.rating-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    background: #e5e7eb;
+    color: #6b7280;
+    min-height: 50px;
+    flex-wrap: wrap;
+}
+
+.rating-stars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.star-filled {
+    filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4));
+}
+
+.rating-value {
+    font-weight: 700;
+    color: #111827;
+    font-size: 1rem;
+}
+
+.rating-count {
+    font-size: 0.82rem;
+    color: #9ca3af;
+}
+
+.rating-none {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    font-style: italic;
+}
+
 @keyframes spin { 
     to { transform: rotate(360deg); } 
 }
