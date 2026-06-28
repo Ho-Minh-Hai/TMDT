@@ -17,14 +17,14 @@ const Home = () => {
     const [boostedIds, setBoostedIds] = useState([]);
 
     const categories = [
-        { id: 'all', name: 'Tất cả'},
-        { id: 'electronics', name: 'Điện tử & Máy tính' },
-        { id: 'fashion', name: 'Thời trang' },
-        { id: 'home', name: 'Nhà & Ngoài trời' },
-        { id: 'sports', name: 'Thể thao & Ngoài trời' },
+        { id: 'all', name: 'Tất cả', icon: '📦' },
+        { id: 'Điện tử', name: 'Điện tử & Máy tính', icon: '💻' },
+        { id: 'Quần áo', name: 'Thời trang', icon: '👕' },
+        { id: 'Đồ gia dụng', name: 'Nhà & Ngoài trời', icon: '🏠' },
+        { id: 'Thể thao', name: 'Thể thao & Ngoài trời', icon: '⚽' },
     ];
 
-    // Fetch 6 latest products from Supabase
+    // Fetch products from Supabase based on category
     useEffect(() => {
         const fetchProducts = async () => {
             setLoading(true);
@@ -32,12 +32,22 @@ const Home = () => {
                 const storedBoosted = JSON.parse(localStorage.getItem('boosted_products') || '[]');
                 setBoostedIds(storedBoosted);
 
-                const { data, error } = await supabase
+                // Start building the query
+                let query = supabase
                     .from('products')
                     .select('*')
-                    .eq('status', 'available')
-                    .order('created_at', { ascending: false })
-                    .limit(6);
+                    .eq('status', 'available');
+
+                // Add category filter if not 'all'
+                if (selectedCategory !== 'all') {
+                    query = query.eq('category', selectedCategory);
+                }
+
+                // Add ordering and limit
+                query = query.order('created_at', { ascending: false }).limit(6);
+
+                // Execute the query
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -63,6 +73,8 @@ const Home = () => {
                     const profileMap = {};
                     (profiles || []).forEach(p => { profileMap[p.id] = p; });
                     setSellerProfiles(profileMap);
+                } else {
+                    setSellerProfiles({});
                 }
             } catch (err) {
                 console.error('Error fetching products:', err);
@@ -72,7 +84,7 @@ const Home = () => {
         };
 
         fetchProducts();
-    }, []);
+    }, [selectedCategory]);
 
     return (
         <div className="home-container">
