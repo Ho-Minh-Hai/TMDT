@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import UserSearchBar from "./components/UserSearchBar";
 import { supabase } from './supabaseClient';
 import { ShoppingBag, Star, TrendingUp, ShieldCheck, LogOut, Search, User, ArrowRight, MessageSquare, Package, ChevronRight, Sparkles } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
@@ -102,17 +103,12 @@ const Home = () => {
                 </button>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
-                    <Link to="/shop?filter=deals" className="nav-link">Ưu đãi</Link>
-                    <Link to="/shop?filter=trending" className="nav-link">Xu hướng</Link>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Quản lý shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
@@ -128,10 +124,10 @@ const Home = () => {
                     <div className="sidebar-section">
                         <h3 className="sidebar-title">QUẢN LÝ TÀI KHOẢN</h3>
                         <ul className="sidebar-menu">
-                            <li><Link to="/profile" className="sidebar-item">👤 Hồ sơ cá nhân</Link></li>
-                            <li><Link to="/wishlist" className="sidebar-item">📌 Danh sách yêu thích</Link></li>
-                            <li><Link to="/purchase-history" className="sidebar-item">⏱️ Lịch sử mua hàng</Link></li>
-                            <li><Link to="/vip-member" className="sidebar-item">👑 Vip member</Link></li>
+                            <li><Link to="/profile" className="sidebar-item"> Hồ sơ cá nhân</Link></li>
+                            <li><Link to="/wishlist" className="sidebar-item"> Danh sách yêu thích</Link></li>
+                            <li><Link to="/purchase-history" className="sidebar-item"> Lịch sử mua hàng</Link></li>
+                            <li><Link to="/vip-member" className="sidebar-item"> Vip member</Link></li>
                         </ul>
                     </div>
 

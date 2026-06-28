@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Send, MessageSquare, User, Search, X, MapPin, StickyNote, ShoppingBag, Package, LogOut, Handshake, DollarSign, CheckCircle2, XCircle } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
+import UserSearchBar from '../components/UserSearchBar';
 import { Link, useNavigate } from 'react-router-dom';
 import './Chat.css';
 
@@ -673,17 +674,12 @@ const Chat = () => {
                 </button>
 
                 <div className="nav-links">
-                    <Link to="/shop" className="nav-link">Bộ sưu tập</Link>
-                    <a href="#" className="nav-link">Ưu đãi</a>
-                    <a href="#" className="nav-link">Xu hướng</a>
-                    <Link to="/chat" className="nav-icon-link" title="Tin nhắn">
-                        <MessageSquare size={20} />
-                    </Link>
-                    <Link to="/seller" className="nav-icon-link" title="Shop">
-                        <Package size={20} />
-                    </Link>
+                    <a href="/shop" className="nav-link">Bộ sưu tập</a>
+                    <a href="/wishlist" className="nav-link">Yêu thích</a>
+                    <a href="/chat" className="nav-link">Tin nhắn</a>
+                    <a href="/seller" className="nav-link">Đăng bài</a>
                 </div>
-
+                <UserSearchBar />
                 <Link to="/profile" className="user-tag" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <User size={18} />
                     <span style={{ fontSize: '0.9rem' }}>{profile?.full_name || user?.email?.split('@')[0]}</span>
