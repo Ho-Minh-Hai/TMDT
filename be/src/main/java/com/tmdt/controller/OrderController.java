@@ -1,6 +1,8 @@
 package com.tmdt.controller;
 
+import com.tmdt.dto.AdminOrderDTO;
 import com.tmdt.dto.OrderRequestDTO;
+import com.tmdt.dto.PageResponseDTO;
 import com.tmdt.model.Order;
 import com.tmdt.model.Product;
 import com.tmdt.security.UserPrincipal;
@@ -15,10 +17,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(origins = "*")
+
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*") // Hỗ trợ kết nối chéo từ Front-end React
 public class OrderController {
 
     private final SupabaseService supabaseService;
@@ -64,6 +67,33 @@ public class OrderController {
 
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi: " + e.getMessage());
+        }
+    }
+    // Lấy danh sách đơn hàng kèm phân trang và lọc theo trạng thái
+    @GetMapping("/admin")
+    public ResponseEntity<?> getAdminOrders(
+            @RequestParam String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            PageResponseDTO<AdminOrderDTO> response = supabaseService.getAdminOrders(status, page, limit);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Cập nhật trạng thái đơn hàng nhanh chóng
+    @PatchMapping("/admin/{id}/status")
+    public ResponseEntity<?> updateStatus(
+            @PathVariable String id,
+            @RequestBody Map<String, String> requestBody) {
+        try {
+            String newStatus = requestBody.get("status");
+            supabaseService.updateOrderStatus(id, newStatus);
+            return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái thành công!"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
 }
