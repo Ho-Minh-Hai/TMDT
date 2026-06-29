@@ -111,7 +111,6 @@ public class VnPayService {
             membershipData.put("expires_at", expiresAt.toString());
 
             supabaseService.createVipMembership(membershipData);
-            System.out.println("✓ Created pending VIP membership with txnRef: " + vnpTxnRef);
         } catch (Exception e) {
             System.err.println("✗ Failed to create pending VIP membership: " + e.getMessage());
         }
