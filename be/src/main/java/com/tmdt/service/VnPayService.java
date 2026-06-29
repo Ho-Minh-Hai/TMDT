@@ -83,14 +83,13 @@ public class VnPayService {
                 queryBuilder.append("&");
             }
             hashDataBuilder.append(entry.getKey()).append("=")
-                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8).replaceAll("\\+", "%20"));
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
             queryBuilder.append(entry.getKey()).append("=")
-                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8).replaceAll("\\+", "%20"));
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
         }
 
         String hashData = hashDataBuilder.toString();
         String vnpSecureHash = VnPayConfig.hmacSHA512(vnPayConfig.getVnpHashSecret(), hashData);
-
         queryBuilder.append("&vnp_SecureHash=").append(vnpSecureHash);
 
         String paymentUrl = vnPayConfig.getVnpPayUrl() + "?" + queryBuilder.toString();
@@ -115,9 +114,7 @@ public class VnPayService {
             System.out.println("✓ Created pending VIP membership with txnRef: " + vnpTxnRef);
         } catch (Exception e) {
             System.err.println("✗ Failed to create pending VIP membership: " + e.getMessage());
-            // Vẫn tiếp tục vì không muốn block thanh toán
         }
-
         return paymentUrl;
     }
 
