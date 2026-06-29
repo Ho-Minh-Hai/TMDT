@@ -111,7 +111,6 @@ public class VnPayService {
             membershipData.put("expires_at", expiresAt.toString());
 
             supabaseService.createVipMembership(membershipData);
-            System.out.println("✓ Created pending VIP membership with txnRef: " + vnpTxnRef);
         } catch (Exception e) {
             System.err.println("✗ Failed to create pending VIP membership: " + e.getMessage());
         }
@@ -145,7 +144,7 @@ public class VnPayService {
                 hashDataBuilder.append("&");
             }
             hashDataBuilder.append(entry.getKey()).append("=")
-                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8).replaceAll("\\+", "%20"));
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.US_ASCII));
         }
 
         String calculatedHash = VnPayConfig.hmacSHA512(vnPayConfig.getVnpHashSecret(), hashDataBuilder.toString());
@@ -194,7 +193,6 @@ public class VnPayService {
 
             result.put("success", false);
             result.put("message", "Payment failed with response code: " + vnpResponseCode);
-            System.out.println("✗ VNPay payment failed for txnRef: " + vnpTxnRef + ", code: " + vnpResponseCode);
         }
 
         return result;

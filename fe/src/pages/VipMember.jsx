@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import UserSearchBar from '../components/UserSearchBar';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ShoppingBag, User, LogOut, MessageSquare, Package, 
@@ -10,7 +10,7 @@ import {
     QrCode, CreditCard, CheckCircle2, AlertCircle, Copy,
     Loader2
 } from 'lucide-react';
-import { createVnPayUrl, verifyVnPayReturn, getVipMembership, cancelVipMembership } from '../services/api';
+import { createVnPayUrl, getVipMembership, cancelVipMembership } from '../services/api';
 import './VipMember.css';
 
 // Custom CSS-based Confetti component
@@ -118,8 +118,6 @@ const PLANS = [
 const VipMember = () => {
     const { user, profile, signOut } = useAuth();
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-
     const [activePlan, setActivePlan] = useState(null);
     const [activeMembershipId, setActiveMembershipId] = useState(null);
     const [userProducts, setUserProducts] = useState([]);
@@ -144,13 +142,6 @@ const VipMember = () => {
         }
     }, [user]);
 
-    // 2. Handle VNPay Return URL
-    useEffect(() => {
-        const vnpResponseCode = searchParams.get('vnp_ResponseCode');
-        if (vnpResponseCode && user) {
-            handleVnPayReturn();
-        }
-    }, [searchParams, user]);
 
     const loadVipMembership = async () => {
         try {
@@ -200,36 +191,6 @@ const VipMember = () => {
     /**
      * Xử lý khi VNPay redirect về với các query params.
      */
-    const handleVnPayReturn = async () => {
-        setVerifyingPayment(true);
-        try {
-            // Lấy toàn bộ query string hiện tại
-            const queryString = window.location.search.substring(1); // bỏ dấu ?
-
-            const result = await verifyVnPayReturn(queryString);
-
-            if (result.success) {
-                // Thanh toán thành công!
-                setShowConfetti(true);
-                showToast('Thanh toán VNPay thành công! Chào mừng bạn trở thành VIP Member! 🎉', 'success');
-                setTimeout(() => setShowConfetti(false), 5000);
-
-                // Reload VIP membership từ database
-                await loadVipMembership();
-            } else {
-                showToast(`Thanh toán không thành công: ${result.message || 'Vui lòng thử lại'}`, 'error');
-            }
-
-            // Xóa query params khỏi URL (giữ trang sạch)
-            setSearchParams({});
-        } catch (err) {
-            console.error('Error verifying VNPay payment:', err);
-            showToast('Lỗi xác thực thanh toán. Vui lòng liên hệ hỗ trợ.', 'error');
-            setSearchParams({});
-        } finally {
-            setVerifyingPayment(false);
-        }
-    };
 
     const fetchUserProducts = async () => {
         if (!user) return;

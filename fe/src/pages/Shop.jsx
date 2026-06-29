@@ -48,6 +48,8 @@ const Shop = () => {
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [boostedIds, setBoostedIds] = useState([]);
+    const [vipSellerIds, setVipSellerIds] = useState([]);
+    const [sellerRatings, setSellerRatings] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedCondition, setSelectedCondition] = useState('all');
@@ -94,6 +96,20 @@ const Shop = () => {
     const fetchProducts = async () => {
         setLoading(true);
         try {
+            const storedBoosted = JSON.parse(localStorage.getItem('boosted_products') || '[]');
+            setBoostedIds(storedBoosted);
+
+            const now = new Date().toISOString();
+            const { data: vipData, error: vipError } = await supabase
+                .from('vip_memberships')
+                .select('user_id')
+                .eq('payment_status', 'success')
+                .gte('expires_at', now);
+
+            if (vipError) throw vipError;
+            const vipIds = [...new Set((vipData || []).map(v => v.user_id).filter(Boolean))];
+            setVipSellerIds(vipIds);
+
             const { data, error } = await supabase
                 .from('products')
                 .select('*')
@@ -101,20 +117,74 @@ const Shop = () => {
 
             if (error) throw error;
 
-            setProducts(data || []);
+            const productsData = data || [];
+            const sellerIds = [...new Set(productsData.map(p => p.seller_id).filter(Boolean))];
 
-            // Fetch seller profiles for all unique seller IDs
-            const sellerIds = [...new Set((data || []).map(p => p.seller_id).filter(Boolean))];
             if (sellerIds.length > 0) {
-                const { data: profiles } = await supabase
+                const { data: profiles, error: profileError } = await supabase
                     .from('profiles')
                     .select('id, full_name, avatar_url, school')
                     .in('id', sellerIds);
 
+                if (profileError) throw profileError;
                 const profileMap = {};
                 (profiles || []).forEach(p => { profileMap[p.id] = p; });
                 setSellerProfiles(profileMap);
+            } else {
+                setSellerProfiles({});
             }
+
+            const productIds = productsData.map(p => p.id).filter(Boolean);
+            const ratingMap = {};
+            if (productIds.length > 0) {
+                const { data: reviews, error: reviewError } = await supabase
+                    .from('reviews')
+                    .select('rating, product_id')
+                    .in('product_id', productIds);
+
+                if (reviewError) throw reviewError;
+
+                const ratingsAcc = {};
+                const ratingsCount = {};
+                const productsById = productsData.reduce((acc, product) => {
+                    if (product?.id) acc[product.id] = product;
+                    return acc;
+                }, {});
+
+                (reviews || []).forEach(review => {
+                    const prod = productsById[review.product_id];
+                    if (!prod || !prod.seller_id) return;
+                    const sellerId = prod.seller_id;
+                    ratingsAcc[sellerId] = (ratingsAcc[sellerId] || 0) + (review.rating || 0);
+                    ratingsCount[sellerId] = (ratingsCount[sellerId] || 0) + 1;
+                });
+
+                Object.keys(ratingsAcc).forEach(sellerId => {
+                    ratingMap[sellerId] = ratingsCount[sellerId]
+                        ? ratingsAcc[sellerId] / ratingsCount[sellerId]
+                        : 0;
+                });
+            }
+            setSellerRatings(ratingMap);
+
+            const sortedProducts = [...productsData].sort((a, b) => {
+                const aVip = vipIds.includes(a.seller_id);
+                const bVip = vipIds.includes(b.seller_id);
+                if (aVip !== bVip) return aVip ? -1 : 1;
+                if (aVip && bVip) {
+                    const aRating = ratingMap[a.seller_id] || 0;
+                    const bRating = ratingMap[b.seller_id] || 0;
+                    if (bRating !== aRating) return bRating - aRating;
+                    return new Date(b.created_at) - new Date(a.created_at);
+                }
+
+                const aBoosted = storedBoosted.includes(a.id);
+                const bBoosted = storedBoosted.includes(b.id);
+                if (aBoosted !== bBoosted) return aBoosted ? -1 : 1;
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            setProducts(sortedProducts);
         } catch (err) {
             console.error('Error fetching products:', err);
         } finally {
@@ -181,19 +251,21 @@ const Shop = () => {
                 break;
             case 'newest':
             default:
-                result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                // Keep the original order from products state so VIP ordering is preserved.
                 break;
         }
 
-        // Boosted/Sponsored listings prioritization to the top
-        const boostedIds = JSON.parse(localStorage.getItem('boosted_products') || '[]');
-        result.sort((a, b) => {
-            const aBoosted = boostedIds.includes(a.id);
-            const bBoosted = boostedIds.includes(b.id);
-            if (aBoosted && !bBoosted) return -1;
-            if (!aBoosted && bBoosted) return 1;
-            return 0;
-        });
+        // Boosted/Sponsored listings prioritization to the top only if user explicitly chose a non-VIP sort order
+        if (sortBy !== 'newest') {
+            const boostedIds = JSON.parse(localStorage.getItem('boosted_products') || '[]');
+            result.sort((a, b) => {
+                const aBoosted = boostedIds.includes(a.id);
+                const bBoosted = boostedIds.includes(b.id);
+                if (aBoosted && !bBoosted) return -1;
+                if (!aBoosted && bBoosted) return 1;
+                return 0;
+            });
+        }
 
         setFilteredProducts(result);
     }, [products, searchTerm, selectedCategory, selectedCondition, selectedLocation, selectedSchool, sortBy, priceRange, sellerProfiles]);

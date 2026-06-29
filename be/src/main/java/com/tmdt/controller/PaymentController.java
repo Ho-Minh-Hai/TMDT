@@ -37,7 +37,7 @@ public class PaymentController {
             }
 
             // Lấy IP address của client
-            String ipAddress = "127.0.0.1"; //sửa tạm ip cứng getClientIpAddress(httpRequest); 
+            String ipAddress = getClientIpAddress(httpRequest); 
 
             String paymentUrl = vnPayService.createPaymentUrl(planId, userId, ipAddress);
 

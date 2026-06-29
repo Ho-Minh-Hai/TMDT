@@ -14,6 +14,7 @@ import ProductDetail from './pages/ProductDetail';
 import Wishlist from './pages/Wishlist';
 import PurchaseHistory from './pages/PurchaseHistory';
 import VipMember from './pages/VipMember';
+import VipMemberCallback from './pages/VipMemberCallback';
 import UserProfile from './pages/UserProfile';
 
 /**
@@ -107,6 +108,14 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <VipMember />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/vip-member/callback" 
+                        element={
+                            <ProtectedRoute>
+                                <VipMemberCallback />
                             </ProtectedRoute>
                         } 
                     />
