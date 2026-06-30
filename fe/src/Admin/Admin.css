@@ -259,6 +259,29 @@
     background: var(--bg-light);
 }
 
+.btn-approve {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--blue);
+    background: var(--blue);
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-approve:hover {
+    background: #2563eb;
+}
+
+.btn-approve:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
 .reports-table {
     width: 100%;
     border-collapse: collapse;

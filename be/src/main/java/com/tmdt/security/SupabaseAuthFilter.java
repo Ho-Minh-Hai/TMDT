@@ -45,13 +45,11 @@ public class SupabaseAuthFilter extends OncePerRequestFilter {
 
                     if (userId != null) {
                         String userRole = "USER"; 
-                        System.out.println(">>> [Auth Filter] Đang kiểm tra token của User ID: " + userId);
 
                         try {
                             Map<String, Object> profile = supabaseService.getProfile(userId);
                             if (profile != null && profile.get("role") != null) {
                                 String dbRole = String.valueOf(profile.get("role"));
-                                System.out.println(">>> [Auth Filter] Role lấy được từ Database: " + dbRole);
                                 
                                 // Dùng equalsIgnoreCase để không bị lỗi nếu DB lưu "Admin", "ADMIN" hay "admin"
                                 if (dbRole.trim().equalsIgnoreCase("admin")) {
@@ -63,8 +61,8 @@ public class SupabaseAuthFilter extends OncePerRequestFilter {
                         } catch (Exception e) {
                             System.out.println(">>> [Auth Filter] Lỗi khi gọi getProfile: " + e.getMessage());
                         }
+                        //thằng nào print cả đống ở đây vậy
 
-                        System.out.println(">>> [Auth Filter] Quyền cuối cùng được cấp: ROLE_" + userRole);
 
                         UserPrincipal principal = new UserPrincipal(userId, token, userRole);
                         SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + userRole);
