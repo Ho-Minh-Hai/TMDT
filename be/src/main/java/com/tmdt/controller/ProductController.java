@@ -1,5 +1,7 @@
 package com.tmdt.controller;
 
+import com.tmdt.dto.AdminProductDTO;
+import com.tmdt.dto.PageResponseDTO;
 import com.tmdt.dto.ProductRequest;
 import com.tmdt.model.Product;
 import com.tmdt.security.UserPrincipal;
@@ -42,6 +44,29 @@ public class ProductController {
                     .body(Map.of("error", "Failed to fetch products: " + e.getMessage()));
         }
     }
+    @GetMapping("/admin")
+    public ResponseEntity<?> getAllProductsForAdmin(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        try {
+            // Kiểm tra quyền Admin (Không phân biệt hoa thường)
+            Map<String, Object> profile = supabaseService.getProfile(principal.getUserId());
+            
+            String role = profile != null && profile.get("role") != null ? String.valueOf(profile.get("role")) : "";
+            
+            if (!role.trim().equalsIgnoreCase("admin")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. Admin role required."));
+            }
+
+            PageResponseDTO<AdminProductDTO> response = supabaseService.getAdminProducts(page, limit);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch admin products: " + e.getMessage()));
+        }
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getProduct(@PathVariable String id,
@@ -76,6 +101,11 @@ public class ProductController {
 
             Map<String, Object> productData = buildProductMap(request, principal.getUserId());
             Product created = supabaseService.createProduct(productData);
+            
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "post_product", "product", created.getId(), 
+                "Đã đăng bán sản phẩm: \"" + created.getName() + "\" với giá " + created.getPrice() + "đ");
+
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -101,6 +131,11 @@ public class ProductController {
             Map<String, Object> productData = buildProductMap(request, null);
             productData.put("updated_at", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
             Product updated = supabaseService.updateProduct(id, productData);
+
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "update_product", "product", updated.getId(), 
+                "Đã cập nhật thông tin sản phẩm: \"" + updated.getName() + "\"");
+
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -123,6 +158,11 @@ public class ProductController {
             }
 
             supabaseService.deleteProduct(id);
+
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "delete_product", "product", id, 
+                "Đã xóa sản phẩm: \"" + existing.getName() + "\"");
+
             return ResponseEntity.ok(Map.of("message", "Product deleted successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -149,6 +189,11 @@ public class ProductController {
             data.put("updated_at", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
 
             Product updated = supabaseService.updateProduct(id, data);
+
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "update_product", "product", updated.getId(), 
+                "Đã đổi trạng thái sản phẩm \"" + updated.getName() + "\" thành " + ("sold".equals(updated.getStatus()) ? "Đã bán" : "Đang bán"));
+
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

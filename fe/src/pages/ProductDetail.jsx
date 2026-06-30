@@ -226,6 +226,10 @@ const ProductDetail = () => {
 
                 setReviews([newRev, ...reviews]);
 
+                if (newRev.warning) {
+                    alert("⚠️ Cảnh báo: Bình luận của bạn chứa từ khóa không phù hợp và hệ thống đã ghi nhận 1 lần cảnh cáo. Vui lòng giữ lịch sự khi giao tiếp!");
+                }
+
                 // Reset form
                 setNewComment('');
                 setNewRating(5);
@@ -311,6 +315,10 @@ const ProductDetail = () => {
                     media_url: finalMediaUrl
                 } : r));
                 setEditingReviewId(null);
+
+                if (updatedRev.warning) {
+                    alert("⚠️ Cảnh báo: Bình luận của bạn chứa từ khóa không phù hợp và hệ thống đã ghi nhận 1 lần cảnh cáo. Vui lòng giữ lịch sự khi giao tiếp!");
+                }
             }
         } catch (error) {
             console.error(error);

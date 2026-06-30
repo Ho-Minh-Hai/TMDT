@@ -50,16 +50,48 @@ public class ReviewController {
                 return ResponseEntity.badRequest().body("Bạn đã đánh giá sản phẩm này rồi!");
             }
 
-            // 3. Chuẩn bị Map dữ liệu để gửi sang Supabase
+            // 3. Kiểm tra từ khóa cấm và chuẩn bị comment đã lọc
+            String originalComment = dto.getComment();
+            boolean isViolating = supabaseService.checkBannedKeywords(originalComment);
+            String filteredComment = supabaseService.filterBannedKeywords(originalComment);
+
+            // 4. Chuẩn bị Map dữ liệu để gửi sang Supabase
             Map<String, Object> reviewData = new HashMap<>();
             reviewData.put("reviewer_id", reviewerId);
             reviewData.put("product_id", dto.getProductId());
             reviewData.put("rating", dto.getRating());
-            reviewData.put("comment", dto.getComment());
+            reviewData.put("comment", filteredComment);
+            reviewData.put("media_url", dto.getMediaUrl());
 
-            // 4. Gọi Service tạo Review
+            // 5. Gọi Service tạo Review
             Review savedReview = supabaseService.createReview(reviewData);
-            return ResponseEntity.ok(savedReview);
+
+            if (savedReview == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi tạo đánh giá!");
+            }
+
+            // 6. Kiểm tra từ khóa cấm và tạo cảnh cáo
+            if (isViolating) {
+                supabaseService.createUserWarning(reviewerId, "Vi phạm từ khóa cấm", "keyword", originalComment);
+            }
+
+            // 7. Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(reviewerId, "comment", "review", savedReview.getId(), 
+                "Đã đăng đánh giá " + dto.getRating() + " sao: \"" + originalComment + "\"");
+
+            // 8. Trả về payload kèm flag warning
+            Map<String, Object> responsePayload = new HashMap<>();
+            responsePayload.put("id", savedReview.getId());
+            responsePayload.put("reviewer_id", savedReview.getReviewerId());
+            responsePayload.put("product_id", savedReview.getProductId());
+            responsePayload.put("rating", savedReview.getRating());
+            responsePayload.put("comment", savedReview.getComment());
+            responsePayload.put("created_at", savedReview.getCreatedAt());
+            responsePayload.put("updated_at", savedReview.getUpdatedAt());
+            responsePayload.put("media_url", savedReview.getMediaUrl());
+            responsePayload.put("warning", isViolating);
+
+            return ResponseEntity.ok(responsePayload);
 
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
@@ -95,12 +127,43 @@ public class ReviewController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền sửa đánh giá này");
         }
 
+        // 1. Kiểm tra từ khóa cấm và chuẩn bị comment đã lọc
+        String originalComment = dto.getComment();
+        boolean isViolating = supabaseService.checkBannedKeywords(originalComment);
+        String filteredComment = supabaseService.filterBannedKeywords(originalComment);
+
         Map<String, Object> updateData = new HashMap<>();
         updateData.put("rating", dto.getRating());
-        updateData.put("comment", dto.getComment());
+        updateData.put("comment", filteredComment);
         updateData.put("media_url", dto.getMediaUrl());
         updateData.put("updated_at", java.time.OffsetDateTime.now().toString());
 
-        return ResponseEntity.ok(supabaseService.updateReview(reviewId, updateData));
+        Review updatedReview = supabaseService.updateReview(reviewId, updateData);
+        if (updatedReview == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi cập nhật đánh giá!");
+        }
+
+        // 2. Tạo cảnh cáo nếu vi phạm
+        if (isViolating) {
+            supabaseService.createUserWarning(principal.getUserId(), "Vi phạm từ khóa cấm khi sửa bình luận", "keyword", originalComment);
+        }
+
+        // 3. Ghi nhật ký hoạt động
+        supabaseService.createActivityLog(principal.getUserId(), "comment", "review", reviewId, 
+            "Đã sửa đánh giá: \"" + originalComment + "\"");
+
+        // 4. Trả về payload kèm flag warning
+        Map<String, Object> responsePayload = new HashMap<>();
+        responsePayload.put("id", updatedReview.getId());
+        responsePayload.put("reviewer_id", updatedReview.getReviewerId());
+        responsePayload.put("product_id", updatedReview.getProductId());
+        responsePayload.put("rating", updatedReview.getRating());
+        responsePayload.put("comment", updatedReview.getComment());
+        responsePayload.put("created_at", updatedReview.getCreatedAt());
+        responsePayload.put("updated_at", updatedReview.getUpdatedAt());
+        responsePayload.put("media_url", updatedReview.getMediaUrl());
+        responsePayload.put("warning", isViolating);
+
+        return ResponseEntity.ok(responsePayload);
     }
 }

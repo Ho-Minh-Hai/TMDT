@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
+import Admin from './Admin/Admin';
 import Wishlist from './pages/Wishlist';
 import PurchaseHistory from './pages/PurchaseHistory';
 import VipMember from './pages/VipMember';
@@ -34,7 +35,7 @@ const ProtectedRoute = ({ children }) => {
  * Redirects to /home after login.
  */
 const AuthRoute = ({ children }) => {
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
     if (user) {
         return <Navigate to="/home" />;
     }
@@ -136,17 +137,25 @@ function App() {
                             <ProtectedRoute>
                                 <Shop />
                             </ProtectedRoute>
-                        } 
+                        }
                     />
 
                     {/* Product detail page */}
-                    <Route 
-                        path="/product/:id" 
+                    <Route
+                        path="/product/:id"
                         element={
                             <ProtectedRoute>
                                 <ProductDetail />
                             </ProtectedRoute>
-                        } 
+                        }
+                    />
+
+                    {/* =========================================
+                        ADMIN ROUTES - Chỉ dành cho Role Admin
+                    ========================================= */}
+                    <Route
+                        path="/admin"
+                        element={<Admin />}
                     />
 
                     {/* Wishlist page */}
