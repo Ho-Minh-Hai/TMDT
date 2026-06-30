@@ -7,8 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ShoppingBag, User, LogOut, MessageSquare, Package, 
     ArrowLeft, Check, Sparkles, Zap, Crown, 
-    QrCode, CreditCard, CheckCircle2, AlertCircle, Copy
+    QrCode, CreditCard, CheckCircle2, AlertCircle, Copy,
+    Loader2
 } from 'lucide-react';
+import { createVnPayUrl, getVipMembership, cancelVipMembership } from '../services/api';
 import './VipMember.css';
 
 // Custom CSS-based Confetti component
@@ -116,51 +118,79 @@ const PLANS = [
 const VipMember = () => {
     const { user, profile, signOut } = useAuth();
     const navigate = useNavigate();
-
     const [activePlan, setActivePlan] = useState(null);
+    const [activeMembershipId, setActiveMembershipId] = useState(null);
     const [userProducts, setUserProducts] = useState([]);
     const [boostedIds, setBoostedIds] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
 
-    // Modal checkout state
-    const [checkoutModal, setCheckoutModal] = useState({ open: false, plan: null });
-    const [paymentMethod, setPaymentMethod] = useState('bank'); // bank, momo, vnpay
-    const [isVerifying, setIsVerifying] = useState(false);
+    // Payment state
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [verifyingPayment, setVerifyingPayment] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
     const [toast, setToast] = useState(null);
 
-    // Load active VIP membership and boosted products from localStorage
+    // Checkout modal state
+    const [checkoutModal, setCheckoutModal] = useState({ open: false, plan: null });
+
+    // 1. Load active VIP membership from database
     useEffect(() => {
         if (user) {
+            loadVipMembership();
+            loadBoostedProducts();
+            fetchUserProducts();
+        }
+    }, [user]);
+
+
+    const loadVipMembership = async () => {
+        try {
+            const result = await getVipMembership(user.id);
+            if (result.active && result.membership) {
+                const m = result.membership;
+                setActivePlan({
+                    planId: m.plan_id,
+                    planName: m.plan_name,
+                    boostLimit: m.boost_limit,
+                    boostsRemaining: m.boosts_remaining,
+                    registeredAt: m.registered_at || m.created_at,
+                    expiresAt: m.expires_at
+                });
+                setActiveMembershipId(m.id);
+            }
+        } catch (err) {
+            console.error('Error loading VIP membership from API:', err);
+            // Fallback to localStorage
             const storedMembership = localStorage.getItem(`vip_membership_${user.id}`);
             if (storedMembership) {
                 try {
                     const parsed = JSON.parse(storedMembership);
-                    // Check expiry (30 days from registration)
                     if (new Date(parsed.expiresAt) > new Date()) {
                         setActivePlan(parsed);
                     } else {
-                        // Expired
                         localStorage.removeItem(`vip_membership_${user.id}`);
                     }
                 } catch (e) {
                     console.error('Error parsing VIP membership', e);
                 }
             }
-
-            // Global boosted products list
-            const storedBoosted = localStorage.getItem('boosted_products');
-            if (storedBoosted) {
-                try {
-                    setBoostedIds(JSON.parse(storedBoosted));
-                } catch (e) {
-                    console.error('Error parsing boosted IDs', e);
-                }
-            }
-
-            fetchUserProducts();
         }
-    }, [user]);
+    };
+
+    const loadBoostedProducts = () => {
+        const storedBoosted = localStorage.getItem('boosted_products');
+        if (storedBoosted) {
+            try {
+                setBoostedIds(JSON.parse(storedBoosted));
+            } catch (e) {
+                console.error('Error parsing boosted IDs', e);
+            }
+        }
+    };
+
+    /**
+     * Xử lý khi VNPay redirect về với các query params.
+     */
 
     const fetchUserProducts = async () => {
         if (!user) return;
@@ -184,54 +214,60 @@ const VipMember = () => {
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), 4000);
     };
 
     const handleSelectPlan = (plan) => {
         setCheckoutModal({ open: true, plan });
-        setPaymentMethod('bank');
     };
 
-    const handleConfirmPayment = () => {
-        setIsVerifying(true);
-        setTimeout(() => {
-            const now = new Date();
-            const expires = new Date();
-            expires.setDate(now.getDate() + 30); // 30 days active
+    /**
+     * Gọi API tạo VNPay URL và redirect user sang cổng thanh toán VNPay.
+     */
+    const handleVnPayCheckout = async () => {
+        if (!checkoutModal.plan || !user) return;
 
-            const newMembership = {
-                planId: checkoutModal.plan.id,
-                planName: checkoutModal.plan.name,
-                boostLimit: checkoutModal.plan.boostLimit,
-                boostsRemaining: checkoutModal.plan.boostLimit,
-                registeredAt: now.toISOString(),
-                expiresAt: expires.toISOString()
-            };
+        setPaymentLoading(true);
+        try {
+            const result = await createVnPayUrl(checkoutModal.plan.id, user.id);
 
-            localStorage.setItem(`vip_membership_${user.id}`, JSON.stringify(newMembership));
-            setActivePlan(newMembership);
-            setIsVerifying(false);
-            setCheckoutModal({ open: false, plan: null });
-
-            // Trigger confetti
-            setShowConfetti(true);
-            showToast(`Đăng ký ${checkoutModal.plan.name} thành công! 🎉`, 'success');
-            setTimeout(() => setShowConfetti(false), 5000);
-        }, 1500); // 1.5s delay to simulate banking hook verification
+            if (result.paymentUrl) {
+                // Redirect sang VNPay Sandbox
+                window.location.href = result.paymentUrl;
+            } else {
+                showToast('Không thể tạo liên kết thanh toán. Vui lòng thử lại.', 'error');
+            }
+        } catch (err) {
+            console.error('Error creating VNPay URL:', err);
+            showToast('Lỗi kết nối. Vui lòng thử lại sau.', 'error');
+        } finally {
+            setPaymentLoading(false);
+        }
     };
 
-    const handleCancelVip = () => {
+    const handleCancelVip = async () => {
         if (window.confirm('Bạn có chắc chắn muốn hủy gói thành viên VIP? Các bài viết đang boost sẽ mất nhãn tài trợ.')) {
-            // Remove user's boosted products from the global boosted list
-            const userProductIds = userProducts.map(p => p.id);
-            const remainingGlobalBoosted = boostedIds.filter(id => !userProductIds.includes(id));
-            
-            localStorage.setItem('boosted_products', JSON.stringify(remainingGlobalBoosted));
-            setBoostedIds(remainingGlobalBoosted);
-            
-            localStorage.removeItem(`vip_membership_${user.id}`);
-            setActivePlan(null);
-            showToast('Đã hủy gói thành viên VIP thành công!', 'info');
+            try {
+                // Remove user's boosted products from the global boosted list
+                const userProductIds = userProducts.map(p => p.id);
+                const remainingGlobalBoosted = boostedIds.filter(id => !userProductIds.includes(id));
+                
+                localStorage.setItem('boosted_products', JSON.stringify(remainingGlobalBoosted));
+                setBoostedIds(remainingGlobalBoosted);
+
+                // Xóa trên database
+                if (activeMembershipId) {
+                    await cancelVipMembership(activeMembershipId);
+                }
+                
+                localStorage.removeItem(`vip_membership_${user.id}`);
+                setActivePlan(null);
+                setActiveMembershipId(null);
+                showToast('Đã hủy gói thành viên VIP thành công!', 'info');
+            } catch (err) {
+                console.error('Error cancelling VIP:', err);
+                showToast('Lỗi khi hủy gói VIP. Vui lòng thử lại.', 'error');
+            }
         }
     };
 
@@ -293,6 +329,27 @@ const VipMember = () => {
         return d.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
 
+    // Hiển thị loading nếu đang xác thực thanh toán VNPay
+    if (verifyingPayment) {
+        return (
+            <div className="vip-page">
+                <div className="bg-mesh"></div>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '100vh',
+                    gap: '1.5rem'
+                }}>
+                    <div className="loading-spinner" style={{ width: '48px', height: '48px' }}></div>
+                    <h2 style={{ color: 'var(--text-primary)', fontSize: '1.5rem' }}>Đang xác thực thanh toán...</h2>
+                    <p style={{ color: 'var(--text-dim)' }}>Vui lòng chờ trong giây lát, hệ thống đang kiểm tra giao dịch VNPay của bạn.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="vip-page">
             <div className="bg-mesh"></div>
@@ -306,7 +363,7 @@ const VipMember = () => {
                 </div>
             )}
 
-            {/* Checkout Modal */}
+            {/* VNPay Checkout Modal */}
             <AnimatePresence>
                 {checkoutModal.open && (
                     <div className="modal-overlay">
@@ -316,119 +373,87 @@ const VipMember = () => {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="modal-content payment-modal"
                         >
-                            <div className="payment-title">Thanh toán đăng ký</div>
+                            <div className="payment-title">Thanh toán qua VNPay</div>
                             <div className="payment-subtitle">Bạn đang chọn: <strong>{checkoutModal.plan?.name}</strong></div>
 
-                            {/* Select payment method */}
-                            <div className="payment-methods-grid">
-                                <button 
-                                    className={`pay-method-btn ${paymentMethod === 'bank' ? 'active' : ''}`}
-                                    onClick={() => setPaymentMethod('bank')}
-                                >
-                                    <CreditCard size={20} color="var(--primary)" />
-                                    <span>Chuyển khoản</span>
-                                </button>
-                                <button 
-                                    className={`pay-method-btn ${paymentMethod === 'momo' ? 'active' : ''}`}
-                                    onClick={() => setPaymentMethod('momo')}
-                                >
+                            {/* VNPay payment info */}
+                            <div className="vnpay-checkout-info">
+                                <div className="vnpay-logo-banner">
                                     <div style={{
-                                        width: '28px',
-                                        height: '28px',
+                                        width: '60px',
+                                        height: '36px',
                                         borderRadius: '8px',
-                                        backgroundColor: '#a50064',
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '9px',
-                                        fontWeight: '800',
-                                        fontFamily: 'system-ui, sans-serif'
-                                    }}>MoMo</div>
-                                    <span>Ví MoMo</span>
-                                </button>
-                                <button 
-                                    className={`pay-method-btn ${paymentMethod === 'vnpay' ? 'active' : ''}`}
-                                    onClick={() => setPaymentMethod('vnpay')}
-                                >
-                                    <div style={{
-                                        width: '38px',
-                                        height: '24px',
-                                        borderRadius: '6px',
                                         background: 'linear-gradient(135deg, #005baa, #00adef)',
                                         color: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '8px',
+                                        fontSize: '12px',
                                         fontWeight: '800',
                                         fontFamily: 'system-ui, sans-serif'
                                     }}>VNPAY</div>
-                                    <span>VNPAY QR</span>
-                                </button>
-                            </div>
-
-                            {/* QR Code and Instructions */}
-                            <div className="qr-code-wrapper">
-                                <div className="qr-code-container">
-                                    <img 
-                                        className="mock-qr-img"
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                                            `STU_HUB_VIP_${checkoutModal.plan?.id}_${user?.id}`
-                                        )}`} 
-                                        alt="QR Payment" 
-                                    />
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Cổng thanh toán VNPay Sandbox</span>
                                 </div>
+
                                 <div className="transfer-details">
                                     <div className="detail-row">
-                                        <span className="detail-lbl">Số tiền cần thanh toán</span>
-                                        <span className="detail-val" style={{ color: 'var(--primary)', fontSize: '1rem' }}>
+                                        <span className="detail-lbl">Gói đăng ký</span>
+                                        <span className="detail-val">{checkoutModal.plan?.name}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-lbl">Số tiền thanh toán</span>
+                                        <span className="detail-val" style={{ color: 'var(--primary)', fontSize: '1.1rem', fontWeight: '700' }}>
                                             {checkoutModal.plan?.priceVND} VNĐ
                                         </span>
                                     </div>
                                     <div className="detail-row">
-                                        <span className="detail-lbl">Tên tài khoản</span>
-                                        <span className="detail-val">STUDENT HUB COMPANY</span>
+                                        <span className="detail-lbl">Thời hạn</span>
+                                        <span className="detail-val">30 ngày</span>
                                     </div>
                                     <div className="detail-row">
-                                        <span className="detail-lbl">Số tài khoản</span>
-                                        <span className="detail-val copyable" onClick={() => { navigator.clipboard.writeText('1028372619'); showToast('Đã copy số tài khoản!'); }}>
-                                            1028372619 <Copy size={12} />
-                                        </span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="detail-lbl">Ngân hàng</span>
-                                        <span className="detail-val">Vietcombank</span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="detail-lbl">Cú pháp chuyển khoản</span>
-                                        <span className="detail-val copyable" onClick={() => { navigator.clipboard.writeText(`STUHUB VIP ${checkoutModal.plan?.id}`); showToast('Đã copy cú pháp!'); }}>
-                                            STUHUB VIP {checkoutModal.plan?.id} <Copy size={12} />
+                                        <span className="detail-lbl">Lượt boost</span>
+                                        <span className="detail-val">
+                                            {checkoutModal.plan?.boostLimit === 9999 ? 'Không giới hạn' : checkoutModal.plan?.boostLimit + ' lượt'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pay-alert">
-                                <AlertCircle size={28} />
-                                <span>Lưu ý: Đây là hệ thống thử nghiệm tĩnh của web. Bấm xác nhận phía dưới sẽ mô phỏng hoàn tất giao dịch tự động.</span>
+                            <div className="pay-alert" style={{ background: 'rgba(0, 91, 170, 0.08)', borderColor: 'rgba(0, 91, 170, 0.2)' }}>
+                                <AlertCircle size={28} color="#005baa" />
+                                <span>Bạn sẽ được chuyển đến cổng thanh toán VNPay để hoàn tất giao dịch. Sử dụng thẻ test NCB: <strong>9704198526191432198</strong> / Tên: <strong>NGUYEN VAN A</strong> / Ngày: <strong>07/15</strong> / OTP: <strong>123456</strong></span>
                             </div>
 
                             <div className="modal-actions" style={{ justifyContent: 'flex-end', marginTop: '1rem' }}>
                                 <button 
                                     className="btn-secondary" 
                                     onClick={() => setCheckoutModal({ open: false, plan: null })}
-                                    disabled={isVerifying}
+                                    disabled={paymentLoading}
                                 >
                                     Hủy bỏ
                                 </button>
                                 <button 
-                                    className="btn-primary" 
-                                    onClick={handleConfirmPayment}
-                                    disabled={isVerifying}
-                                    style={{ background: 'var(--primary)' }}
+                                    className="btn-primary btn-vnpay" 
+                                    onClick={handleVnPayCheckout}
+                                    disabled={paymentLoading}
+                                    style={{ 
+                                        background: 'linear-gradient(135deg, #005baa, #00adef)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}
                                 >
-                                    {isVerifying ? 'Đang kiểm tra...' : 'Xác nhận đã chuyển khoản'}
+                                    {paymentLoading ? (
+                                        <>
+                                            <Loader2 size={16} className="spin-animation" />
+                                            <span>Đang tạo liên kết...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CreditCard size={16} />
+                                            <span>Thanh toán qua VNPay</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </motion.div>

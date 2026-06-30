@@ -13,6 +13,8 @@ const Home = () => {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [products, setProducts] = useState([]);
     const [sellerProfiles, setSellerProfiles] = useState({});
+    const [sellerRatings, setSellerRatings] = useState({});
+    const [vipSellerIds, setVipSellerIds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [boostedIds, setBoostedIds] = useState([]);
 
@@ -32,50 +34,103 @@ const Home = () => {
                 const storedBoosted = JSON.parse(localStorage.getItem('boosted_products') || '[]');
                 setBoostedIds(storedBoosted);
 
-                // Start building the query
+                const now = new Date().toISOString();
+                const { data: vipData, error: vipError } = await supabase
+                    .from('vip_memberships')
+                    .select('user_id')
+                    .eq('payment_status', 'success')
+                    .gte('expires_at', now);
+
+                if (vipError) throw vipError;
+                const vipIds = [...new Set((vipData || []).map(v => v.user_id).filter(Boolean))];
+                setVipSellerIds(vipIds);
+
                 let query = supabase
                     .from('products')
                     .select('*')
                     .eq('status', 'available');
 
-                // Add category filter if not 'all'
                 if (selectedCategory !== 'all') {
                     query = query.eq('category', selectedCategory);
                 }
 
-                // Add ordering and limit
-                query = query.order('created_at', { ascending: false }).limit(6);
+                query = query.order('created_at', { ascending: false }).limit(50);
 
-                // Execute the query
                 const { data, error } = await query;
-
                 if (error) throw error;
 
-                // Sort so boosted items come first
-                const sorted = (data || []).sort((a, b) => {
-                    const aBoosted = storedBoosted.includes(a.id);
-                    const bBoosted = storedBoosted.includes(b.id);
-                    if (aBoosted && !bBoosted) return -1;
-                    if (!aBoosted && bBoosted) return 1;
-                    return 0;
-                });
+                const productsData = data || [];
+                const sellerIds = [...new Set(productsData.map(p => p.seller_id).filter(Boolean))];
 
-                setProducts(sorted);
-
-                // Fetch seller profiles for all unique seller IDs
-                const sellerIds = [...new Set((data || []).map(p => p.seller_id).filter(Boolean))];
+                // Load seller profiles for display
                 if (sellerIds.length > 0) {
-                    const { data: profiles } = await supabase
+                    const { data: profiles, error: profileError } = await supabase
                         .from('profiles')
                         .select('id, full_name, avatar_url')
                         .in('id', sellerIds);
 
+                    if (profileError) throw profileError;
                     const profileMap = {};
                     (profiles || []).forEach(p => { profileMap[p.id] = p; });
                     setSellerProfiles(profileMap);
                 } else {
                     setSellerProfiles({});
                 }
+
+                // Compute seller ratings from reviews for VIP ordering
+                const productIds = productsData.map(p => p.id).filter(Boolean);
+                const ratingMap = {};
+                if (productIds.length > 0) {
+                    const { data: reviews, error: reviewError } = await supabase
+                        .from('reviews')
+                        .select('rating, product_id')
+                        .in('product_id', productIds);
+
+                    if (reviewError) throw reviewError;
+
+                    const ratingsAcc = {};
+                    const ratingsCount = {};
+                    const productsById = productsData.reduce((acc, product) => {
+                        if (product?.id) acc[product.id] = product;
+                        return acc;
+                    }, {});
+
+                    (reviews || []).forEach(review => {
+                        const prod = productsById[review.product_id];
+                        if (!prod || !prod.seller_id) return;
+                        const sellerId = prod.seller_id;
+                        ratingsAcc[sellerId] = (ratingsAcc[sellerId] || 0) + (review.rating || 0);
+                        ratingsCount[sellerId] = (ratingsCount[sellerId] || 0) + 1;
+                    });
+
+                    Object.keys(ratingsAcc).forEach(sellerId => {
+                        ratingMap[sellerId] = ratingsCount[sellerId]
+                            ? ratingsAcc[sellerId] / ratingsCount[sellerId]
+                            : 0;
+                    });
+                }
+                setSellerRatings(ratingMap);
+
+                // Sort products so VIP sellers appear first, then VIP sellers by rating, then boosted items, then newest.
+                const sorted = [...productsData].sort((a, b) => {
+                    const aVip = vipIds.includes(a.seller_id);
+                    const bVip = vipIds.includes(b.seller_id);
+                    if (aVip !== bVip) return aVip ? -1 : 1;
+
+                    if (aVip && bVip) {
+                        const aRating = ratingMap[a.seller_id] || 0;
+                        const bRating = ratingMap[b.seller_id] || 0;
+                        if (bRating !== aRating) return bRating - aRating;
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    }
+
+                    const aBoosted = storedBoosted.includes(a.id);
+                    const bBoosted = storedBoosted.includes(b.id);
+                    if (aBoosted !== bBoosted) return aBoosted ? -1 : 1;
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                setProducts(sorted.slice(0, 6));
             } catch (err) {
                 console.error('Error fetching products:', err);
             } finally {

@@ -75,3 +75,36 @@ export const uploadImage = async (file) => {
     });
     return handleResponse(response);
 };
+
+// ==================== PAYMENT API ====================
+
+export const createVnPayUrl = async (planId, userId) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/payment/create-vnpay-url`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ planId, userId }),
+    });
+    return handleResponse(response);
+};
+
+export const verifyVnPayReturn = async (queryString) => {
+    const response = await fetch(`${API_BASE}/payment/vnpay-return?${queryString}`);
+    return response.json();
+};
+
+export const getVipMembership = async (userId) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/payment/vip-membership/${userId}`, { headers });
+    return handleResponse(response);
+};
+
+export const cancelVipMembership = async (membershipId) => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/payment/vip-membership/${membershipId}`, {
+        method: 'DELETE',
+        headers,
+    });
+    return handleResponse(response);
+};
+

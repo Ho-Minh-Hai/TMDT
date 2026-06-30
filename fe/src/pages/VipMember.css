@@ -726,7 +726,7 @@
 
 /* Back button style */
 .vip-back-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   background: none;
@@ -736,7 +736,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  margin-bottom: 1.5rem;
+  margin-top: 1.25rem;
   font-family: inherit;
   padding: 0;
 }
@@ -744,6 +744,168 @@
 .vip-back-btn:hover {
   color: var(--text-main);
   transform: translateX(-3px);
+}
+
+/* Vip callback page */
+.vip-callback-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, rgba(99, 102, 241, 0.12), transparent 34%),
+              linear-gradient(180deg, #f8fafc 0%, #eef2ff 65%, #ffffff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+}
+
+.vip-callback-shell {
+  width: 100%;
+  max-width: 780px;
+}
+
+.vip-callback-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  border-radius: 32px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.vip-callback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 2.25rem 2.5rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.02));
+  border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.vip-callback-label {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.vip-callback-header h1 {
+  font-size: 2rem;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.vip-callback-status-pill {
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--primary);
+}
+
+.vip-callback-body {
+  padding: 3rem 2.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.vip-callback-body.success {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.06), transparent 80%);
+}
+
+.vip-callback-body.error {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), transparent 80%);
+}
+
+.vip-callback-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-dim);
+}
+
+.vip-callback-result-icon {
+  width: 98px;
+  height: 98px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--primary);
+}
+
+.vip-callback-body.error .vip-callback-result-icon {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.vip-callback-body h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.vip-callback-message {
+  max-width: 640px;
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1.75;
+  margin: 0 auto 0.5rem;
+}
+
+.vip-callback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.callback-button {
+  min-width: 180px;
+  padding: 0.95rem 1.3rem;
+  border-radius: 14px;
+  text-decoration: none;
+}
+
+.btn-primary.callback-button {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  box-shadow: 0 16px 40px rgba(99, 102, 241, 0.18);
+}
+
+.btn-secondary.callback-button {
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: white;
+  color: var(--text-main);
+}
+
+@media (max-width: 768px) {
+  .vip-callback-page {
+    padding: 2rem 1rem;
+  }
+  .vip-callback-card {
+    border-radius: 24px;
+  }
+  .vip-callback-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .vip-callback-body {
+    padding: 2rem 1.75rem 1.75rem;
+  }
+  .vip-callback-header h1 {
+    font-size: 1.75rem;
+  }
 }
 
 /* Responsive Grid styling */
@@ -777,3 +939,50 @@
     margin-top: 1rem;
   }
 }
+
+/* VNPay Checkout Info */
+.vnpay-checkout-info {
+  background: #f9fafb;
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.vnpay-logo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.btn-vnpay {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-vnpay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-vnpay:hover::after {
+  transform: translateX(100%);
+}
+
+/* Spin animation for loading */
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
