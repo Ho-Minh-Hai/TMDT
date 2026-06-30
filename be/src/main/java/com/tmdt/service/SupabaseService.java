@@ -15,9 +15,11 @@ import com.tmdt.dto.AdminConversationDTO;
 import com.tmdt.dto.AdminMessageDTO;
 import com.tmdt.dto.AdminProductDTO;
 import com.tmdt.dto.AdminUserDTO;
+import com.tmdt.dto.AdminOrderDTO;
 import com.tmdt.dto.PageResponseDTO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -180,6 +182,13 @@ public class SupabaseService {
                     // Mặc định nếu null thì hiểu là 0 (Chưa xóa/Đang hoạt động)
                     dto.setIsDelete(node.hasNonNull("isDelete") ? node.get("isDelete").asText() : "0");
                     dto.setCreatedAt(node.hasNonNull("created_at") ? node.get("created_at").asText() : null);
+
+                    // Lấy số lần cảnh cáo
+                    if (dto.getId() != null) {
+                        dto.setWarningCount(getUserWarningCount(dto.getId()));
+                    } else {
+                        dto.setWarningCount(0);
+                    }
 
                     userList.add(dto);
                 }
@@ -928,6 +937,372 @@ public class SupabaseService {
             throw new RuntimeException("Lỗi tạo đơn hàng: " + e.getMessage(), e);
         }
     }
+
+    // Lấy danh sách đơn hàng cho Admin
+    public PageResponseDTO<AdminOrderDTO> getAdminOrders(String status, int page, int limit) {
+        int start = (page - 1) * limit;
+        int end = start + limit - 1;
+
+        String statusFilter = "";
+        if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
+            statusFilter = "&status=eq." + status;
+        }
+
+        // profiles!buyer_id và products!product_id là cú pháp join theo foreign key trong Supabase PostgREST
+        String url = supabaseUrl + "/rest/v1/orders?select=*,buyer:profiles!buyer_id(full_name,avatar_url),products!product_id(name,image_url)" 
+                     + statusFilter + "&order=created_at.desc";
+
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+        headers.set("Prefer", "count=exact");
+        headers.set("Range-Unit", "items");
+        headers.set("Range", start + "-" + end);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+            long totalElements = 0;
+            List<String> contentRangeHeader = response.getHeaders().get("Content-Range");
+            if (contentRangeHeader != null && !contentRangeHeader.isEmpty()) {
+                String range = contentRangeHeader.get(0);
+                String[] parts = range.split("/");
+                if (parts.length > 1) {
+                    totalElements = Long.parseLong(parts[1]);
+                }
+            }
+
+            int totalPages = (int) Math.ceil((double) totalElements / limit);
+
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            List<AdminOrderDTO> orderList = new ArrayList<>();
+
+            if (rootNode.isArray()) {
+                for (JsonNode node : rootNode) {
+                    AdminOrderDTO dto = new AdminOrderDTO();
+                    dto.setId(node.path("id").asText());
+                    dto.setBuyerId(node.path("buyer_id").asText());
+                    
+                    JsonNode buyerNode = node.get("buyer");
+                    if (buyerNode != null && !buyerNode.isNull()) {
+                        dto.setBuyerName(buyerNode.path("full_name").asText("Người dùng ẩn danh"));
+                        dto.setBuyerAvatar(buyerNode.path("avatar_url").asText(null));
+                    } else {
+                        dto.setBuyerName("Người dùng ẩn danh");
+                    }
+
+                    dto.setProductId(node.path("product_id").asText());
+                    JsonNode prodNode = node.get("products");
+                    if (prodNode != null && !prodNode.isNull()) {
+                        dto.setProductName(prodNode.path("name").asText("Sản phẩm không rõ"));
+                        dto.setProductImage(prodNode.path("image_url").asText(null));
+                    } else {
+                        dto.setProductName("Sản phẩm không rõ");
+                    }
+
+                    dto.setAmount(node.path("amount").asDouble(0.0));
+                    dto.setStatus(node.path("status").asText("pending"));
+                    dto.setCreatedAt(node.path("created_at").asText());
+
+                    orderList.add(dto);
+                }
+            }
+
+            return new PageResponseDTO<>(orderList, page, totalPages, totalElements);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to fetch admin orders: " + e.getMessage(), e);
+        }
+    }
+
+    // Cập nhật trạng thái đơn hàng
+    public void updateOrderStatus(String orderId, String newStatus) {
+        String url = supabaseUrl + "/rest/v1/orders?id=eq." + orderId;
+
+        HttpHeaders headers = createHeaders();
+        headers.set("Content-Type", "application/json");
+        headers.set("Prefer", "return=representation");
+
+        Map<String, String> body = new HashMap<>();
+        body.put("status", newStatus);
+
+        try {
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
+            restTemplate.exchange(url, HttpMethod.PATCH, entity, String.class);
+            System.out.println(">>> [Backend] Đã cập nhật trạng thái đơn hàng: " + orderId + " thành " + newStatus);
+        } catch (Exception e) {
+            throw new RuntimeException("Không thể cập nhật trạng thái đơn hàng: " + e.getMessage());
+        }
+    }
+
+    // ==================== BANNED KEYWORDS ====================
+
+    public List<BannedKeyword> getBannedKeywords() {
+        String url = supabaseUrl + "/rest/v1/banned_keywords?order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<BannedKeyword>>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch banned keywords", e);
+        }
+    }
+
+    public BannedKeyword createBannedKeyword(String keyword) {
+        String url = supabaseUrl + "/rest/v1/banned_keywords";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        Map<String, String> body = new HashMap<>();
+        body.put("keyword", keyword);
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(jsonBody, headers), String.class);
+            List<BannedKeyword> list = objectMapper.readValue(response.getBody(), new TypeReference<List<BannedKeyword>>() {});
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create banned keyword: " + e.getMessage(), e);
+        }
+    }
+
+    public void deleteBannedKeyword(String id) {
+        String url = supabaseUrl + "/rest/v1/banned_keywords?id=eq." + id;
+        HttpHeaders headers = createHeaders();
+        try {
+            restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete banned keyword: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean checkBannedKeywords(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            List<BannedKeyword> keywords = getBannedKeywords();
+            String lowerText = text.toLowerCase();
+            for (BannedKeyword bk : keywords) {
+                if (bk.getKeyword() != null && lowerText.contains(bk.getKeyword().toLowerCase())) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error checking banned keywords: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public String filterBannedKeywords(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return text;
+        }
+        try {
+            List<BannedKeyword> keywords = getBannedKeywords();
+            String filtered = text;
+            for (BannedKeyword bk : keywords) {
+                String kw = bk.getKeyword();
+                if (kw != null && !kw.trim().isEmpty()) {
+                    // Thay thế không phân biệt hoa thường
+                    filtered = filtered.replaceAll("(?i)" + java.util.regex.Pattern.quote(kw), "***");
+                }
+            }
+            return filtered;
+        } catch (Exception e) {
+            System.err.println("Error filtering banned keywords: " + e.getMessage());
+            return text;
+        }
+    }
+
+    // ==================== USER WARNINGS ====================
+
+    public UserWarning createUserWarning(String userId, String reason, String source, String detail) {
+        String url = supabaseUrl + "/rest/v1/user_warnings";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("user_id", userId);
+        body.put("reason", reason);
+        body.put("source", source);
+        body.put("detail", detail);
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(jsonBody, headers), String.class);
+            List<UserWarning> list = objectMapper.readValue(response.getBody(), new TypeReference<List<UserWarning>>() {});
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create user warning: " + e.getMessage(), e);
+        }
+    }
+
+    public List<UserWarning> getUserWarnings(String userId) {
+        String url = supabaseUrl + "/rest/v1/user_warnings?user_id=eq." + userId + "&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<UserWarning>>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch user warnings", e);
+        }
+    }
+
+    public List<UserWarning> getAllUserWarnings() {
+        String url = supabaseUrl + "/rest/v1/user_warnings?select=*,profiles:user_id(full_name)&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            List<UserWarning> warningList = new ArrayList<>();
+            if (rootNode.isArray()) {
+                for (JsonNode node : rootNode) {
+                    UserWarning uw = new UserWarning();
+                    uw.setId(node.path("id").asText());
+                    uw.setUserId(node.path("user_id").asText());
+                    uw.setReason(node.path("reason").asText());
+                    uw.setSource(node.path("source").asText("keyword"));
+                    uw.setDetail(node.path("detail").asText(null));
+                    uw.setCreatedAt(OffsetDateTime.parse(node.path("created_at").asText()));
+                    
+                    JsonNode profileNode = node.get("profiles");
+                    if (profileNode != null && !profileNode.isNull()) {
+                        uw.setUserFullName(profileNode.path("full_name").asText("Người dùng ẩn danh"));
+                    } else {
+                        uw.setUserFullName("Người dùng ẩn danh");
+                    }
+                    warningList.add(uw);
+                }
+            }
+            return warningList;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch all user warnings", e);
+        }
+    }
+
+    public long getUserWarningCount(String userId) {
+        String url = supabaseUrl + "/rest/v1/user_warnings?user_id=eq." + userId;
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+        headers.set("Prefer", "count=exact");
+        headers.set("Range", "0-0");
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            List<String> contentRangeHeader = response.getHeaders().get("Content-Range");
+            if (contentRangeHeader != null && !contentRangeHeader.isEmpty()) {
+                String range = contentRangeHeader.get(0);
+                String[] parts = range.split("/");
+                if (parts.length > 1) {
+                    return Long.parseLong(parts[1]);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error getting user warning count: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    // ==================== ACTIVITY LOGS ====================
+
+    public ActivityLog createActivityLog(String userId, String action, String targetType, String targetId, String detail) {
+        String url = supabaseUrl + "/rest/v1/activity_logs";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("user_id", userId);
+        body.put("action", action);
+        body.put("target_type", targetType);
+        body.put("target_id", targetId);
+        body.put("detail", detail);
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(jsonBody, headers), String.class);
+            List<ActivityLog> list = objectMapper.readValue(response.getBody(), new TypeReference<List<ActivityLog>>() {});
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create activity log: " + e.getMessage(), e);
+        }
+    }
+
+    public PageResponseDTO<ActivityLog> getActivityLogs(int page, int limit) {
+        int start = (page - 1) * limit;
+        int end = start + limit - 1;
+
+        String url = supabaseUrl + "/rest/v1/activity_logs?select=*,profiles:user_id(full_name)&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+        headers.set("Prefer", "count=exact");
+        headers.set("Range-Unit", "items");
+        headers.set("Range", start + "-" + end);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+            long totalElements = 0;
+            List<String> contentRangeHeader = response.getHeaders().get("Content-Range");
+            if (contentRangeHeader != null && !contentRangeHeader.isEmpty()) {
+                String range = contentRangeHeader.get(0);
+                String[] parts = range.split("/");
+                if (parts.length > 1) {
+                    totalElements = Long.parseLong(parts[1]);
+                }
+            }
+
+            int totalPages = (int) Math.ceil((double) totalElements / limit);
+
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            List<ActivityLog> logList = new ArrayList<>();
+
+            if (rootNode.isArray()) {
+                for (JsonNode node : rootNode) {
+                    ActivityLog log = new ActivityLog();
+                    log.setId(node.path("id").asText());
+                    log.setUserId(node.path("user_id").asText());
+                    log.setAction(node.path("action").asText());
+                    log.setTargetType(node.path("target_type").asText(null));
+                    log.setTargetId(node.path("target_id").asText(null));
+                    log.setDetail(node.path("detail").asText(null));
+                    log.setCreatedAt(OffsetDateTime.parse(node.path("created_at").asText()));
+
+                    JsonNode profileNode = node.get("profiles");
+                    if (profileNode != null && !profileNode.isNull()) {
+                        log.setUserFullName(profileNode.path("full_name").asText("Người dùng ẩn danh"));
+                    } else {
+                        log.setUserFullName("Người dùng ẩn danh");
+                    }
+
+                    logList.add(log);
+                }
+            }
+
+            return new PageResponseDTO<>(logList, page, totalPages, totalElements);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to fetch activity logs: " + e.getMessage(), e);
+        }
+    }
+
     // ==================== HELPERS ====================
 
     private HttpHeaders createHeaders() {

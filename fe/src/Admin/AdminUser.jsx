@@ -192,16 +192,26 @@ const AdminUser = () => {
                                             <td style={{ padding: '12px' }}>
                                                 {/* Không cho phép tự khóa tài khoản Admin/Chính mình nếu cần thiết */}
                                                 {user.role !== 'admin' && (
-                                                    <button 
-                                                        onClick={() => handleToggleLock(user.id, user.isDelete || '0')}
-                                                        style={{ 
-                                                            display: 'flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer',
-                                                            backgroundColor: isLocked ? '#10b981' : '#ef4444', 
-                                                            color: 'white', padding: '8px 12px', borderRadius: '6px'
-                                                        }}
-                                                    >
-                                                        {isLocked ? <><Unlock size={16} /> Mở khóa</> : <><Lock size={16} /> Khóa TK</>}
-                                                    </button>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <span style={{ 
+                                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                            padding: '6px 10px', borderRadius: '6px', fontSize: '13px', fontWeight: '600',
+                                                            backgroundColor: user.warningCount >= 3 ? '#fee2e2' : user.warningCount > 0 ? '#fef3c7' : '#f3f4f6',
+                                                            color: user.warningCount >= 3 ? '#ef4444' : user.warningCount > 0 ? '#d97706' : '#64748b'
+                                                        }} title="Số lần vi phạm từ khóa hoặc bị báo cáo">
+                                                            ⚠️ {user.warningCount || 0} Cảnh cáo
+                                                        </span>
+                                                        <button 
+                                                            onClick={() => handleToggleLock(user.id, user.isDelete || '0')}
+                                                            style={{ 
+                                                                display: 'flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer',
+                                                                backgroundColor: isLocked ? '#10b981' : '#ef4444', 
+                                                                color: 'white', padding: '8px 12px', borderRadius: '6px'
+                                                            }}
+                                                        >
+                                                            {isLocked ? <><Unlock size={16} /> Mở khóa</> : <><Lock size={16} /> Khóa TK</>}
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>

@@ -101,6 +101,11 @@ public class ProductController {
 
             Map<String, Object> productData = buildProductMap(request, principal.getUserId());
             Product created = supabaseService.createProduct(productData);
+            
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "post_product", "product", created.getId(), 
+                "Đã đăng bán sản phẩm: \"" + created.getName() + "\" với giá " + created.getPrice() + "đ");
+
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -126,6 +131,11 @@ public class ProductController {
             Map<String, Object> productData = buildProductMap(request, null);
             productData.put("updated_at", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
             Product updated = supabaseService.updateProduct(id, productData);
+
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "update_product", "product", updated.getId(), 
+                "Đã cập nhật thông tin sản phẩm: \"" + updated.getName() + "\"");
+
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -148,6 +158,11 @@ public class ProductController {
             }
 
             supabaseService.deleteProduct(id);
+
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "delete_product", "product", id, 
+                "Đã xóa sản phẩm: \"" + existing.getName() + "\"");
+
             return ResponseEntity.ok(Map.of("message", "Product deleted successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -174,6 +189,11 @@ public class ProductController {
             data.put("updated_at", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
 
             Product updated = supabaseService.updateProduct(id, data);
+
+            // Ghi nhật ký hoạt động
+            supabaseService.createActivityLog(principal.getUserId(), "update_product", "product", updated.getId(), 
+                "Đã đổi trạng thái sản phẩm \"" + updated.getName() + "\" thành " + ("sold".equals(updated.getStatus()) ? "Đã bán" : "Đang bán"));
+
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

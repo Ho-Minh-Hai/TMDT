@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
-    LayoutDashboard, Users, AlertCircle, List, MessageSquare,
+    LayoutDashboard, Users, AlertCircle, List, MessageSquare, ShieldAlert, ShoppingBag,
     Settings, HelpCircle, Flag, Clock, Ban, ShieldCheck, Download
 } from 'lucide-react';
 import './Admin.css';
@@ -10,7 +10,9 @@ import './Admin.css';
 // Import các sub-components
 import AdminProduct from './AdminProduct';
 import AdminUser from './AdminUser';
-import AdminViewMessage from './AdminViewMessage';
+import AdminBannedKeywords from './AdminBannedKeywords';
+import AdminOrder from './AdminOrder';
+import AdminDashboard from './AdminDashboard';
 
 const Admin = () => {
     const { profile } = useAuth();
@@ -52,10 +54,16 @@ const Admin = () => {
                         <List size={20} /> Danh sách sản phẩm
                     </a>
 
-                    <a href="#messages"
-                        className={`menu-item ${activeTab === 'messages' ? 'active' : ''}`}
-                        onClick={(e) => { e.preventDefault(); setActiveTab('messages'); }}>
-                        <MessageSquare size={20} /> Messages
+                    <a href="#banned-keywords"
+                        className={`menu-item ${activeTab === 'banned-keywords' ? 'active' : ''}`}
+                        onClick={(e) => { e.preventDefault(); setActiveTab('banned-keywords'); }}>
+                        <ShieldAlert size={20} /> Kiểm duyệt bình luận
+                    </a>
+
+                    <a href="#orders"
+                        className={`menu-item ${activeTab === 'orders' ? 'active' : ''}`}
+                        onClick={(e) => { e.preventDefault(); setActiveTab('orders'); }}>
+                        <ShoppingBag size={20} /> Quản lý đơn hàng
                     </a>
                 </nav>
 
@@ -81,16 +89,14 @@ const Admin = () => {
                 {/* 2. Tab Người dùng */}
                 {activeTab === 'users' && <AdminUser />}
 
-                {/* 3. Tab Tin nhắn (Hộp thư) */}
-                {activeTab === 'messages' && <AdminViewMessage />}
+                {/* 3. Tab Kiểm duyệt bình luận */}
+                {activeTab === 'banned-keywords' && <AdminBannedKeywords />}
 
-                {/* 4. Tab Dashboard (Placeholder) */}
-                {activeTab === 'dashboard' && (
-                    <div style={{ padding: '20px' }}>
-                        <h1>Dashboard</h1>
-                        <p>Biểu đồ thống kê đang được cập nhật...</p>
-                    </div>
-                )}
+                {/* 3.1. Tab Quản lý đơn hàng */}
+                {activeTab === 'orders' && <AdminOrder />}
+
+                {/* 4. Tab Dashboard */}
+                {activeTab === 'dashboard' && <AdminDashboard />}
 
                 {/* 5. Tab Báo cáo vi phạm (Giao diện mặc định) */}
                 {activeTab === 'reports' && (
