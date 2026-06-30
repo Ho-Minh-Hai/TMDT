@@ -1303,6 +1303,112 @@ public class SupabaseService {
         }
     }
 
+    // ==================== VIP MEMBERSHIPS ====================
+
+    /**
+     * Tạo bản ghi VIP membership mới (trạng thái pending, chờ thanh toán).
+     */
+    public Map<String, Object> createVipMembership(Map<String, Object> data) {
+        String url = supabaseUrl + "/rest/v1/vip_memberships";
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        try {
+            String body = objectMapper.writeValueAsString(data);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class
+            );
+            List<Map<String, Object>> list = objectMapper.readValue(
+                    response.getBody(), new TypeReference<List<Map<String, Object>>>() {}
+            );
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create VIP membership: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Tìm VIP membership theo mã giao dịch VNPay (vnp_TxnRef).
+     */
+    public Map<String, Object> getVipMembershipByTxnRef(String txnRef) {
+        String url = supabaseUrl + "/rest/v1/vip_memberships?vnp_txn_ref=eq." + txnRef;
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+
+        try {
+            List<Map<String, Object>> list = objectMapper.readValue(
+                    response.getBody(), new TypeReference<List<Map<String, Object>>>() {}
+            );
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get VIP membership by txnRef: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Cập nhật VIP membership theo vnp_txn_ref.
+     */
+    public Map<String, Object> updateVipMembershipByTxnRef(String txnRef, Map<String, Object> data) {
+        String url = supabaseUrl + "/rest/v1/vip_memberships?vnp_txn_ref=eq." + txnRef;
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        try {
+            String body = objectMapper.writeValueAsString(data);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PATCH, new HttpEntity<>(body, headers), String.class
+            );
+            List<Map<String, Object>> list = objectMapper.readValue(
+                    response.getBody(), new TypeReference<List<Map<String, Object>>>() {}
+            );
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update VIP membership: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Lấy VIP membership đang active (chưa hết hạn, đã thanh toán thành công) của user.
+     */
+    public Map<String, Object> getActiveVipMembership(String userId) {
+        String now = java.time.OffsetDateTime.now().toString();
+        String url = supabaseUrl + "/rest/v1/vip_memberships?user_id=eq." + userId
+                + "&payment_status=eq.success"
+                + "&expires_at=gte." + now
+                + "&order=created_at.desc&limit=1";
+
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+
+        try {
+            List<Map<String, Object>> list = objectMapper.readValue(
+                    response.getBody(), new TypeReference<List<Map<String, Object>>>() {}
+            );
+            return list.isEmpty() ? null : list.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get active VIP membership: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Xóa (hủy) VIP membership theo ID.
+     */
+    public void deleteVipMembership(String membershipId) {
+        String url = supabaseUrl + "/rest/v1/vip_memberships?id=eq." + membershipId;
+        HttpHeaders headers = createHeaders();
+        restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
+    }
+
     // ==================== HELPERS ====================
 
     private HttpHeaders createHeaders() {
