@@ -2,10 +2,14 @@ import { supabase } from '../supabaseClient';
 
 const API_BASE = 'http://localhost:8080/api';
 
-const getAuthHeaders = async () => {
+export const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+        throw new Error('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.');
+    }
     return {
-        'Authorization': `Bearer ${session?.access_token}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
     };
 };

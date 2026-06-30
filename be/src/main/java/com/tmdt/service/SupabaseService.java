@@ -294,8 +294,6 @@ public class SupabaseService {
         try {
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
             restTemplate.exchange(url, HttpMethod.PATCH, entity, String.class);
-            System.out.println(
-                    ">>> [Backend] Đã cập nhật trạng thái isDelete = " + newStatus + " cho User ID: " + userId);
         } catch (Exception e) {
             throw new RuntimeException("Không thể cập nhật trạng thái khóa: " + e.getMessage());
         }
@@ -467,7 +465,6 @@ public class SupabaseService {
             body.put("user2_id", user2Id);
 
             String bodyJson = objectMapper.writeValueAsString(body);
-            System.out.println("Creating conversation with body: " + bodyJson);
 
             ResponseEntity<String> postRes = restTemplate.exchange(
                     postUrl, HttpMethod.POST, new HttpEntity<>(bodyJson, headers), String.class);
@@ -524,7 +521,6 @@ public class SupabaseService {
             headers.set("Prefer", "return=representation");
 
             String bodyJson = objectMapper.writeValueAsString(messageData);
-            System.out.println("Creating message with data: " + bodyJson);
 
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.POST, new HttpEntity<>(bodyJson, headers), String.class);
@@ -1029,7 +1025,7 @@ public class SupabaseService {
         try {
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
             restTemplate.exchange(url, HttpMethod.PATCH, entity, String.class);
-            System.out.println(">>> [Backend] Đã cập nhật trạng thái đơn hàng: " + orderId + " thành " + newStatus);
+            //sysout xong đéo xóa djtme log dài dòng bực vãi l
         } catch (Exception e) {
             throw new RuntimeException("Không thể cập nhật trạng thái đơn hàng: " + e.getMessage());
         }
@@ -1216,6 +1212,64 @@ public class SupabaseService {
             System.err.println("Error getting user warning count: " + e.getMessage());
         }
         return 0;
+    }
+
+    public List<Report> getAllReports() {
+        String url = supabaseUrl + "/rest/v1/report?select=*&order=created_at.desc";
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            List<Report> reportList = new ArrayList<>();
+            if (rootNode.isArray()) {
+                for (JsonNode node : rootNode) {
+                    Report report = new Report();
+                    report.setId(node.path("id").asText());
+                    report.setReporterId(node.path("reporter_id").asText());
+                    report.setReportedUserId(node.path("reported_user_id").asText());
+                    report.setReason(node.path("reason").asText(null));
+                    String createdAtText = node.path("created_at").asText(null);
+                    if (createdAtText != null && !createdAtText.isEmpty()) {
+                        report.setCreatedAt(OffsetDateTime.parse(createdAtText));
+                    }
+                    reportList.add(report);
+                }
+            }
+            return reportList;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch reports", e);
+        }
+    }
+
+    public UserWarning approveReport(String reportId) {
+        String url = supabaseUrl + "/rest/v1/report?id=eq." + reportId;
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            if (!rootNode.isArray() || rootNode.size() == 0) {
+                throw new RuntimeException("Report not found");
+            }
+            JsonNode reportNode = rootNode.get(0);
+            String reportedUserId = reportNode.path("reported_user_id").asText();
+            String reason = reportNode.path("reason").asText("Báo cáo vi phạm");
+
+            // Nếu report không có reported_user_id, thông báo rõ
+            if (reportedUserId == null || reportedUserId.isEmpty()) {
+                throw new RuntimeException("Reported user id is missing");
+            }
+
+            UserWarning warning = createUserWarning(reportedUserId, reason, "report", "Duyệt báo cáo vi phạm");
+            return warning;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to approve report", e);
+        }
     }
 
     // ==================== ACTIVITY LOGS ====================

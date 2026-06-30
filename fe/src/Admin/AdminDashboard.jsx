@@ -4,9 +4,15 @@ import { supabase } from '../supabaseClient';
 
 const AdminDashboard = () => {
     const [logs, setLogs] = useState([]);
+    const [totalActivities, setTotalActivities] = useState(0);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+
+    const formatDate = (value) => {
+        const date = value ? new Date(value) : null;
+        return date && !isNaN(date.getTime()) ? date.toLocaleString('vi-VN') : 'Không xác định';
+    };
 
     const fetchLogs = async (currentPage) => {
         setIsLoading(true);
@@ -14,13 +20,18 @@ const AdminDashboard = () => {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
-            const response = await fetch(`http://localhost:8080/api/admin/activity-logs?page=${currentPage}&limit=10`, {
+            const response = await fetch(`http://localhost:8080/api/admin/activity-logs?page=${currentPage}&limit=5`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.ok) {
                 const data = await response.json();
-                setLogs(data.content || []);
+                const normalizedLogs = (data.content || []).map((log) => ({
+                    ...log,
+                    createdAt: log.createdAt || log.created_at,
+                }));
+                setLogs(normalizedLogs);
+                setTotalActivities(data.totalElements || 0);
                 setTotalPages(data.totalPages || 1);
             }
         } catch (error) {
@@ -99,14 +110,9 @@ const AdminDashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                 <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', margin: '0 0 8px 0' }}>Tổng số hoạt động</p>
-                    <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>{logs.length * page} +</h3>
+                    <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>{totalActivities.toLocaleString('vi-VN')}</h3>
                 </div>
-                <div style={{ padding: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
-                    <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', margin: '0 0 8px 0' }}>Trạng thái hệ thống</p>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#16a34a', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        ● Hoạt động ổn định
-                    </h3>
-                </div>
+                 {/* để hoạt động ổn định sẽ gây ra câu hỏi như thế nào là ổn định và nếu bị dame thì sẽ báo lỗi gì -> tốt nhất ko nên để */}
             </div>
 
             {/* Activity Logs Feed */}
@@ -156,7 +162,7 @@ const AdminDashboard = () => {
                                             </span>
                                         </div>
                                         <span style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Calendar size={12} /> {new Date(log.createdAt).toLocaleString('vi-VN')}
+                                            <Calendar size={12} /> {formatDate(log.createdAt)}
                                         </span>
                                     </div>
                                     <p style={{ margin: '8px 0 0 0', color: '#475569', fontSize: '0.925rem', lineHeight: '1.5' }}>
