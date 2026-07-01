@@ -182,7 +182,7 @@ const Home = () => {
                             <li><Link to="/profile" className="sidebar-item"> Hồ sơ cá nhân</Link></li>
                             <li><Link to="/wishlist" className="sidebar-item"> Danh sách yêu thích</Link></li>
                             <li><Link to="/purchase-history" className="sidebar-item"> Lịch sử mua hàng</Link></li>
-                            <li><Link to="/vip-member" className="sidebar-item"> Vip member</Link></li>
+                            <li><Link to="/vip-member" className="sidebar-item"> Boost bài</Link></li>
                         </ul>
                     </div>
 

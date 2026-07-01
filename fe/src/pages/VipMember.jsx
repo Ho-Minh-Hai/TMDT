@@ -65,52 +65,17 @@ const ConfettiEffect = () => {
 const PLANS = [
     {
         id: 'starter',
-        name: 'Gói Starter (Boost 3)',
+        name: 'Gói Boost Bài Viết',
         priceUSD: 10,
         priceVND: '250.000',
-        boostLimit: 3,
-        popular: false,
-        gold: false,
-        features: [
-            'Boost tối đa 3 bài viết',
-            'Đẩy bài đăng lên đầu danh sách',
-            'Hiện nhãn "Được tài trợ" nổi bật',
-            'Gói cước có hiệu lực 30 ngày',
-            'Hỗ trợ kỹ thuật 24/7'
-        ]
-    },
-    {
-        id: 'popular',
-        name: 'Gói Popular (Boost 5)',
-        priceUSD: 15,
-        priceVND: '370.000',
-        boostLimit: 5,
-        popular: true,
-        gold: false,
-        features: [
-            'Boost tối đa 5 bài viết cùng lúc',
-            'Đẩy bài đăng lên đầu danh sách',
-            'Hiện nhãn "Được tài trợ" nổi bật',
-            'Gói cước có hiệu lực 30 ngày',
-            'Hỗ trợ ưu tiên hàng đầu',
-            'Báo cáo hiệu quả tin đăng'
-        ]
-    },
-    {
-        id: 'unlimited',
-        name: 'Gói VIP Unlimited',
-        priceUSD: 50,
-        priceVND: '1.250.000',
         boostLimit: 9999,
-        popular: false,
-        gold: true,
+        durationDays: 9999,
         features: [
-            'Boost KHÔNG GIỚI HẠN bài viết',
-            'Ưu tiên vị trí cao nhất trên trang chủ',
-            'Nhãn "Tài trợ VIP" lấp lánh đặc biệt',
-            'Gói cước có hiệu lực 30 ngày',
-            'Hỗ trợ quản lý riêng chuyên nghiệp',
-            'Miễn phí đăng tin không giới hạn'
+            'Hiển thị ưu tiên ở đầu danh sách',
+            'Nổi bật hơn so với các bài đăng thông thường',
+            'Tăng khả năng được người mua nhìn thấy',
+            'Gia tăng cơ hội nhận tin nhắn và thương lượng',
+            'Kích hoạt ngay sau khi thanh toán thành công'
         ]
     }
 ];
@@ -283,20 +248,17 @@ const VipMember = () => {
             localStorage.setItem('boosted_products', JSON.stringify(updatedBoosts));
             setBoostedIds(updatedBoosts);
 
-            // Increment boosts remaining (if not unlimited)
-            if (activePlan.planId !== 'unlimited') {
-                const updatedMembership = {
-                    ...activePlan,
-                    boostsRemaining: Math.min(activePlan.boostLimit, activePlan.boostsRemaining + 1)
-                };
-                localStorage.setItem(`vip_membership_${user.id}`, JSON.stringify(updatedMembership));
-                setActivePlan(updatedMembership);
-            }
+            const updatedMembership = {
+                ...activePlan,
+                boostsRemaining: Math.min(activePlan.boostLimit, activePlan.boostsRemaining + 1)
+            };
+            localStorage.setItem(`vip_membership_${user.id}`, JSON.stringify(updatedMembership));
+            setActivePlan(updatedMembership);
             showToast('Đã dừng tài trợ bài viết này');
         } else {
             // Boost
             // Check if user has boosts remaining
-            if (activePlan.planId !== 'unlimited' && activePlan.boostsRemaining <= 0) {
+            if (activePlan.boostsRemaining <= 0) {
                 showToast('Bạn đã hết lượt boost! Hãy nâng cấp gói hoặc hủy các bài đang boost khác.', 'error');
                 return;
             }
@@ -305,15 +267,12 @@ const VipMember = () => {
             localStorage.setItem('boosted_products', JSON.stringify(updatedBoosts));
             setBoostedIds(updatedBoosts);
 
-            // Decrement boosts remaining (if not unlimited)
-            if (activePlan.planId !== 'unlimited') {
-                const updatedMembership = {
-                    ...activePlan,
-                    boostsRemaining: Math.max(0, activePlan.boostsRemaining - 1)
-                };
-                localStorage.setItem(`vip_membership_${user.id}`, JSON.stringify(updatedMembership));
-                setActivePlan(updatedMembership);
-            }
+            const updatedMembership = {
+                ...activePlan,
+                boostsRemaining: Math.max(0, activePlan.boostsRemaining - 1)
+            };
+            localStorage.setItem(`vip_membership_${user.id}`, JSON.stringify(updatedMembership));
+            setActivePlan(updatedMembership);
             showToast('Đã boost bài viết của bạn thành công! ✨', 'success');
         }
     };
@@ -398,7 +357,7 @@ const VipMember = () => {
                                 <div className="transfer-details">
                                     <div className="detail-row">
                                         <span className="detail-lbl">Gói đăng ký</span>
-                                        <span className="detail-val">{checkoutModal.plan?.name}</span>
+                                        <span className="detail-val">{checkoutModal.plan?.name} (bản dùng thử)</span>
                                     </div>
                                     <div className="detail-row">
                                         <span className="detail-lbl">Số tiền thanh toán</span>
@@ -408,7 +367,7 @@ const VipMember = () => {
                                     </div>
                                     <div className="detail-row">
                                         <span className="detail-lbl">Thời hạn</span>
-                                        <span className="detail-val">30 ngày</span>
+                                        <span className="detail-val">Không giới hạn</span>
                                     </div>
                                     <div className="detail-row">
                                         <span className="detail-lbl">Lượt boost</span>
@@ -419,10 +378,6 @@ const VipMember = () => {
                                 </div>
                             </div>
 
-                            <div className="pay-alert" style={{ background: 'rgba(0, 91, 170, 0.08)', borderColor: 'rgba(0, 91, 170, 0.2)' }}>
-                                <AlertCircle size={28} color="#005baa" />
-                                <span>Bạn sẽ được chuyển đến cổng thanh toán VNPay để hoàn tất giao dịch. Sử dụng thẻ test NCB: <strong>9704198526191432198</strong> / Tên: <strong>NGUYEN VAN A</strong> / Ngày: <strong>07/15</strong> / OTP: <strong>123456</strong></span>
-                            </div>
 
                             <div className="modal-actions" style={{ justifyContent: 'flex-end', marginTop: '1rem' }}>
                                 <button 
@@ -501,7 +456,7 @@ const VipMember = () => {
                         <Crown size={16} />
                         <span>TÍNH NĂNG TÀI TRỢ DOANH SỐ</span>
                     </div>
-                    <h1 className="vip-title">Nâng cấp VIP Member & Boost Bài Viết</h1>
+                    <h1 className="vip-title">Boost Bài Viết</h1>
                     <p className="vip-subtitle">
                         Đẩy tin đăng của bạn lên vị trí đầu tiên của trang chủ và trang tìm kiếm để tiếp cận hàng ngàn sinh viên trong nháy mắt.
                     </p>
@@ -512,13 +467,11 @@ const VipMember = () => {
                     /* Pricing Cards Grid */
                     <div className="vip-plans-grid">
                         {PLANS.map((plan) => (
-                            <div key={plan.id} className={`vip-card ${plan.popular ? 'popular' : ''} ${plan.gold ? 'gold' : ''}`}>
-                                {plan.popular && <span className="plan-badge popular-badge">Bán chạy nhất</span>}
-                                {plan.gold && <span className="plan-badge gold-badge">Premium VIP</span>}
+                            <div key={plan.id} className="vip-card single-plan-card">
                                 
                                 <div className="plan-name">{plan.name}</div>
                                 <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                                    {plan.id === 'unlimited' ? 'Đầu tư hoàn hảo cho shop lớn' : 'Dễ dàng bắt đầu bán hàng nhanh'}
+                                    Gói duy nhất để boost bài viết
                                 </p>
 
                                 <div className="plan-price-box">
@@ -527,13 +480,13 @@ const VipMember = () => {
                                 </div>
 
                                 <div className="plan-duration" style={{ marginBottom: '1.5rem', fontWeight: '600' }}>
-                                    {plan.id === 'unlimited' ? 'Không giới hạn lượt boost / 30 ngày' : `Nhận ${plan.boostLimit} lượt boost bài / 30 ngày`}
+                                    Nhận lượt boost bài không giới hạn (bản dùng thử)
                                 </div>
 
                                 <ul className="plan-features">
                                     {plan.features.map((feat, idx) => (
                                         <li key={idx} className="plan-feature-item">
-                                            <CheckCircle2 size={16} color={plan.gold ? '#f59e0b' : 'var(--primary)'} />
+                                            <CheckCircle2 size={16} color="var(--primary)" />
                                             <span>{feat}</span>
                                         </li>
                                     ))}
@@ -555,16 +508,16 @@ const VipMember = () => {
                         <div className="active-dashboard">
                             <div className="active-header">
                                 <div className="active-badge-card">
-                                    <div className={`active-icon-box ${activePlan.planId === 'unlimited' ? 'gold' : ''}`}>
-                                        {activePlan.planId === 'unlimited' ? <Crown size={28} /> : <Zap size={28} />}
+                                    <div className="active-icon-box">
+                                        <Zap size={28} />
                                     </div>
                                     <div className="active-details">
                                         <h2>
                                             {activePlan.planName}
                                             <span className="sponsored-badge-pill" style={{ 
-                                                background: activePlan.planId === 'unlimited' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                                                color: activePlan.planId === 'unlimited' ? '#d97706' : 'var(--primary)',
-                                                borderColor: activePlan.planId === 'unlimited' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(99, 102, 241, 0.2)'
+                                                background: 'rgba(99, 102, 241, 0.12)',
+                                                color: 'var(--primary)',
+                                                borderColor: 'rgba(99, 102, 241, 0.2)'
                                             }}>
                                                 Hoạt động
                                             </span>
@@ -576,7 +529,7 @@ const VipMember = () => {
                                 <div className="dashboard-stats">
                                     <div className="stat-item">
                                         <span className="stat-val">
-                                            {activePlan.planId === 'unlimited' ? 'Vô hạn' : activePlan.boostsRemaining}
+                                            {activePlan.boostsRemaining}
                                         </span>
                                         <span className="stat-lbl">Lượt boost còn lại</span>
                                     </div>
@@ -629,10 +582,10 @@ const VipMember = () => {
                                                         <div className="boosting-badge-row">
                                                             {isBoosted && (
                                                                 <span className="sponsored-badge-pill" style={{ 
-                                                                    background: activePlan.planId === 'unlimited' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                                                                    color: activePlan.planId === 'unlimited' ? '#d97706' : 'var(--primary)'
+                                                                    background: 'rgba(99, 102, 241, 0.12)',
+                                                                    color: 'var(--primary)'
                                                                 }}>
-                                                                    {activePlan.planId === 'unlimited' ? '✨ VIP Tài Trợ' : '✨ Được tài trợ'}
+                                                                    ✨ Được tài trợ
                                                                 </span>
                                                             )}
                                                             <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', alignSelf: 'center' }}>
@@ -644,7 +597,7 @@ const VipMember = () => {
                                                         <button 
                                                             className={`btn-boost-action ${isBoosted ? 'unboost' : 'boost'}`}
                                                             onClick={() => handleToggleBoost(product.id)}
-                                                            disabled={!isBoosted && activePlan.planId !== 'unlimited' && activePlan.boostsRemaining <= 0}
+                                                            disabled={!isBoosted && activePlan.boostsRemaining <= 0}
                                                         >
                                                             {isBoosted ? 'Hủy Boost' : 'Boost bài'}
                                                         </button>

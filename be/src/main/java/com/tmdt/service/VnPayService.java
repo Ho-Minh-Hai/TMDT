@@ -17,21 +17,15 @@ public class VnPayService {
 
     // Bảng giá các gói VIP (đơn vị VND)
     private static final Map<String, Long> PLAN_PRICES = Map.of(
-            "starter", 250000L,
-            "popular", 370000L,
-            "unlimited", 1250000L
+            "starter", 250000L
     );
 
     private static final Map<String, String> PLAN_NAMES = Map.of(
-            "starter", "Gói Starter (Boost 3)",
-            "popular", "Gói Popular (Boost 5)",
-            "unlimited", "Gói VIP Unlimited"
+            "starter", "Gói Boost Bài Viết"
     );
 
     private static final Map<String, Integer> PLAN_BOOST_LIMITS = Map.of(
-            "starter", 3,
-            "popular", 5,
-            "unlimited", 9999
+            "starter", 9999
     );
 
     public VnPayService(VnPayConfig vnPayConfig, SupabaseService supabaseService) {
