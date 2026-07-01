@@ -1215,7 +1215,7 @@ public class SupabaseService {
     }
 
     public List<Report> getAllReports() {
-        String url = supabaseUrl + "/rest/v1/report?select=*&order=created_at.desc";
+        String url = supabaseUrl + "/rest/v1/report?select=*&status=eq.pending&order=created_at.desc";
         HttpHeaders headers = createHeaders();
         headers.set("Accept", "application/json");
 
@@ -1231,6 +1231,7 @@ public class SupabaseService {
                     report.setReporterId(node.path("reporter_id").asText());
                     report.setReportedUserId(node.path("reported_user_id").asText());
                     report.setReason(node.path("reason").asText(null));
+                    report.setStatus(node.path("status").asText(null));
                     String createdAtText = node.path("created_at").asText(null);
                     if (createdAtText != null && !createdAtText.isEmpty()) {
                         report.setCreatedAt(OffsetDateTime.parse(createdAtText));
@@ -1266,9 +1267,27 @@ public class SupabaseService {
             }
 
             UserWarning warning = createUserWarning(reportedUserId, reason, "report", "Duyệt báo cáo vi phạm");
+            updateReportStatus(reportId, "done");
             return warning;
         } catch (Exception e) {
             throw new RuntimeException("Failed to approve report", e);
+        }
+    }
+
+    private void updateReportStatus(String reportId, String status) {
+        String url = supabaseUrl + "/rest/v1/report?id=eq." + reportId;
+        HttpHeaders headers = createHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Prefer", "return=representation");
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", status);
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(jsonBody, headers), String.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update report status: " + e.getMessage(), e);
         }
     }
 

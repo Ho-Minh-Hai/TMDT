@@ -18,6 +18,8 @@ public class Report {
 
     private String reason;
 
+    private String status;
+
     @JsonProperty("created_at")
     private OffsetDateTime createdAt;
 

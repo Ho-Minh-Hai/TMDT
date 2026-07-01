@@ -62,7 +62,8 @@
 /* Pricing Grid */
 .vip-plans-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: minmax(0, 520px);
+  justify-content: center;
   gap: 2rem;
   margin-bottom: 4rem;
 }
@@ -111,6 +112,10 @@
 .vip-card.gold:hover {
   border-color: rgba(245, 158, 11, 0.6);
   box-shadow: 0 20px 40px -15px rgba(245, 158, 11, 0.2);
+}
+
+.single-plan-card {
+  width: 100%;
 }
 
 /* Plan Badge */
@@ -208,6 +213,10 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.single-plan-btn {
+  margin-top: auto;
 }
 
 .vip-card:hover .plan-btn {

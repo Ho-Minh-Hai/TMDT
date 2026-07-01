@@ -12,6 +12,7 @@ import Chat from './pages/Chat';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import Admin from './Admin/Admin';
+import AdminRoute from './components/AdminRoute';
 import Wishlist from './pages/Wishlist';
 import PurchaseHistory from './pages/PurchaseHistory';
 import VipMember from './pages/VipMember';
@@ -155,7 +156,11 @@ function App() {
                     ========================================= */}
                     <Route
                         path="/admin"
-                        element={<Admin />}
+                        element={
+                            <AdminRoute>
+                                <Admin />
+                            </AdminRoute>
+                        }
                     />
 
                     {/* Wishlist page */}
