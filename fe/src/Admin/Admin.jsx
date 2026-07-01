@@ -14,11 +14,12 @@ import AdminBannedKeywords from './AdminBannedKeywords';
 import AdminOrder from './AdminOrder';
 import AdminDashboard from './AdminDashboard';
 import AdminReports from './AdminReports';
+import AdminViewMessage from './AdminViewMessage';
 
 const Admin = () => {
     const { profile } = useAuth();
     // Quản lý tab đang hiển thị
-    const [activeTab, setActiveTab] = useState('reports');
+    const [activeTab, setActiveTab] = useState('dashboard'); // Đặt mặc định là dashboard cho đẹp
 
     return (
         <div className="admin-layout">
@@ -55,10 +56,18 @@ const Admin = () => {
                         <List size={20} /> Danh sách sản phẩm
                     </a>
 
+
+
                     <a href="#banned-keywords"
                         className={`menu-item ${activeTab === 'banned-keywords' ? 'active' : ''}`}
                         onClick={(e) => { e.preventDefault(); setActiveTab('banned-keywords'); }}>
                         <ShieldAlert size={20} /> Kiểm duyệt bình luận
+                    </a>
+
+                    <a href="#messages"
+                        className={`menu-item ${activeTab === 'messages' ? 'active' : ''}`}
+                        onClick={(e) => { e.preventDefault(); setActiveTab('messages'); }}>
+                        <MessageSquare size={20} /> Messenger
                     </a>
 
                 </nav>
@@ -67,7 +76,7 @@ const Admin = () => {
                     <div className="admin-profile-snippet">
                         <div className="admin-info">
                             <h4>{profile?.full_name || 'Admin User'}</h4>
-                            <span>Role: {profile?.role }</span>
+                            <span>Role: {profile?.role}</span>
                         </div>
                     </div>
                 </div>
@@ -84,12 +93,17 @@ const Admin = () => {
                 {/* 3. Tab Kiểm duyệt bình luận */}
                 {activeTab === 'banned-keywords' && <AdminBannedKeywords />}
 
-
                 {/* 4. Tab Dashboard */}
                 {activeTab === 'dashboard' && <AdminDashboard />}
 
                 {/* 5. Tab Báo cáo vi phạm */}
                 {activeTab === 'reports' && <AdminReports />}
+
+                {/* 6. Tab Quản lý đơn hàng */}
+                {activeTab === 'orders' && <AdminOrder />}
+
+                {/* 7. Tab Theo dõi tin nhắn */}
+                {activeTab === 'messages' && <AdminViewMessage />}
             </main>
         </div>
     );
