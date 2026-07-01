@@ -99,9 +99,6 @@ const Admin = () => {
                 {/* 5. Tab Báo cáo vi phạm */}
                 {activeTab === 'reports' && <AdminReports />}
 
-                {/* 6. Tab Quản lý đơn hàng */}
-                {activeTab === 'orders' && <AdminOrder />}
-
                 {/* 7. Tab Theo dõi tin nhắn */}
                 {activeTab === 'messages' && <AdminViewMessage />}
             </main>
