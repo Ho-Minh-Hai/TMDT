@@ -3,8 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoute = ({ children }) => {
-    // Gọi isAdmin thay vì phải tự check profile?.role
-    const { user, isAdmin, loading } = useAuth();
+    const { user, userRole, loading } = useAuth();
 
     if (loading) {
         return (
@@ -20,7 +19,7 @@ const AdminRoute = ({ children }) => {
     }
 
     // Nếu đã đăng nhập nhưng KHÔNG phải admin -> Đẩy về trang chủ
-    if (!isAdmin) {
+    if (userRole !== 'admin') {
         return <Navigate to="/" replace />;
     }
 
