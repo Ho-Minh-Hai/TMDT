@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
+
+const GoogleIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="#EA4335" d="M12 9.5v5h6.9c-.3 1.8-1.8 4.3-6.9 4.3-4.2 0-7.7-3.5-7.7-7.8S7.8 3.2 12 3.2c2.4 0 4 1 5 1.9l3.4-3.3C18.3.7 15.5-.5 12-.5 5.4-.5.1 4.8.1 11.5S5.4 23.5 12 23.5c6.8 0 11.3-4.8 11.3-11.6 0-.8-.1-1.4-.2-2.1H12z" />
+        <path fill="#4285F4" d="M23.1 11.8c0-.7-.1-1.4-.2-2.1H12v4h6.2c-.3 1.5-1.2 2.8-2.5 3.6l3.8 2.9c2.2-2 3.6-5 3.6-8.4z" />
+        <path fill="#FBBC05" d="M5.8 14.3c-.3-.8-.5-1.6-.5-2.6s.2-1.8.5-2.6L2 6.2C1.2 7.7.7 9.4.7 11.7s.5 4 .4 5.5l4.7-2.9z" />
+        <path fill="#34A853" d="M12 23.5c3.5 0 6.3-1.2 8.4-3.3l-3.8-2.9c-1 .7-2.3 1.2-4.6 1.2-5.1 0-6.9-2.5-7.9-4.3l-4.7 2.9c1.8 3.5 5.5 6.4 12.6 6.4z" />
+    </svg>
+);
 
 const Auth = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -11,7 +20,7 @@ const Auth = () => {
     const [error, setError] = useState(null);
     const [successMsg, setSuccessMsg] = useState(null);
     
-    const { signIn, signUp, fetchProfile } = useAuth(); 
+    const { signIn, signUp, signInWithGoogle, fetchProfile, user, profile } = useAuth(); 
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
@@ -19,6 +28,21 @@ const Auth = () => {
         password: '',
         username: '',
     });
+
+    useEffect(() => {
+        if (!user) {
+            return;
+        }
+
+        if (profile?.role === 'admin') {
+            navigate('/admin', { replace: true });
+            return;
+        }
+
+        if (profile) {
+            navigate('/home', { replace: true });
+        }
+    }, [user, profile, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -70,6 +94,22 @@ const Auth = () => {
                 setError(err.message);
             }
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        setError(null);
+        setSuccessMsg(null);
+        setLoading(true);
+
+        try {
+            const { error } = await signInWithGoogle();
+            if (error) {
+                throw error;
+            }
+        } catch (err) {
+            setError(err.message || 'Không thể đăng nhập bằng Google.');
             setLoading(false);
         }
     };
@@ -164,6 +204,28 @@ const Auth = () => {
                                 {loading ? 'Đang xác thực...' : (isLogin ? 'Đăng nhập' : 'Tạo tài khoản')}
                                 <ArrowRight size={20} />
                             </button>
+
+                            {isLogin && (
+                                <button
+                                    type="button"
+                                    onClick={handleGoogleLogin}
+                                    disabled={loading}
+                                    className="btn-auth"
+                                    style={{
+                                        marginTop: '12px',
+                                        background: '#fff',
+                                        color: '#0f172a',
+                                        border: '1px solid #cbd5e1',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px',
+                                    }}
+                                >
+                                    {loading ? 'Đang kết nối Google...' : 'Đăng nhập với Google'}
+                                    <GoogleIcon />
+                                </button>
+                            )}
 
                             <div className="auth-footer">
                                 <button 
