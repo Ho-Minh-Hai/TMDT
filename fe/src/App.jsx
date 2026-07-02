@@ -36,8 +36,11 @@ const ProtectedRoute = ({ children }) => {
  * Redirects to /home after login.
  */
 const AuthRoute = ({ children }) => {
-    const { user, isAdmin } = useAuth();
+    const { user, profile } = useAuth();
     if (user) {
+        if (profile?.role === 'admin') {
+            return <Navigate to="/admin" />;
+        }
         return <Navigate to="/home" />;
     }
     return children;

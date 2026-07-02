@@ -97,10 +97,21 @@ export const AuthProvider = ({ children }) => {
     // Derive role from profile (defaults to 'user' if no profile yet)
     const userRole = profile?.role || 'user';
 
+    const signInWithGoogle = () => {
+        const redirectTo = import.meta.env.VITE_SUPABASE_GOOGLE_REDIRECT_URL || window.location.origin + '/auth';
+        return supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo,
+            },
+        });
+    };
+
     // Will be passed down to Signup, Login and Dashboard components
     const value = {
         signUp: (data) => supabase.auth.signUp(data),
         signIn: (data) => supabase.auth.signInWithPassword(data),
+        signInWithGoogle,
         signOut: () => supabase.auth.signOut(),
         user,
         profile,
