@@ -20,11 +20,14 @@ import com.tmdt.dto.PageResponseDTO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class SupabaseService {
+
+    private static final long VIP_REVENUE_PER_USER = 250_000L;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -1480,6 +1483,77 @@ public class SupabaseService {
         String url = supabaseUrl + "/rest/v1/vip_memberships?id=eq." + membershipId;
         HttpHeaders headers = createHeaders();
         restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
+    }
+
+    /**
+     * Thống kê doanh thu VIP theo tháng cho một năm, đếm mỗi user tối đa 1 lần trong mỗi tháng.
+     */
+    public Map<String, Object> getVipRevenueByYear(int year) {
+        String startDate = YearMonth.of(year, 1).atDay(1).atStartOfDay().toString();
+        String endDate = YearMonth.of(year + 1, 1).atDay(1).atStartOfDay().toString();
+
+        String url = supabaseUrl + "/rest/v1/vip_memberships?select=user_id,created_at,payment_status"
+                + "&payment_status=eq.success"
+                + "&created_at=gte." + startDate
+                + "&created_at=lt." + endDate
+                + "&order=created_at.asc";
+
+        HttpHeaders headers = createHeaders();
+        headers.set("Accept", "application/json");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+        try {
+            List<JsonNode> nodes = objectMapper.readValue(
+                    response.getBody(), new TypeReference<List<JsonNode>>() {}
+            );
+
+            Map<Integer, Set<String>> usersByMonth = new HashMap<>();
+            for (int month = 1; month <= 12; month++) {
+                usersByMonth.put(month, new HashSet<>());
+            }
+
+            for (JsonNode node : nodes) {
+                String userId = node.path("user_id").asText(null);
+                String createdAtText = node.path("created_at").asText(null);
+                if (userId == null || createdAtText == null) {
+                    continue;
+                }
+
+                OffsetDateTime createdAt = OffsetDateTime.parse(createdAtText);
+                if (createdAt.getYear() != year) {
+                    continue;
+                }
+
+                usersByMonth.get(createdAt.getMonthValue()).add(userId);
+            }
+
+            List<Map<String, Object>> monthlyData = new ArrayList<>();
+            long totalRevenue = 0L;
+
+            for (int month = 1; month <= 12; month++) {
+                int uniqueUsers = usersByMonth.get(month).size();
+                long revenue = uniqueUsers * VIP_REVENUE_PER_USER;
+                totalRevenue += revenue;
+
+                Map<String, Object> monthEntry = new HashMap<>();
+                monthEntry.put("month", month);
+                monthEntry.put("label", "Tháng " + month);
+                monthEntry.put("uniqueUsers", uniqueUsers);
+                monthEntry.put("revenue", revenue);
+                monthlyData.add(monthEntry);
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("year", year);
+            result.put("monthlyData", monthlyData);
+            result.put("totalRevenue", totalRevenue);
+            result.put("revenuePerUser", VIP_REVENUE_PER_USER);
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch VIP revenue by year: " + e.getMessage(), e);
+        }
     }
 
     // ==================== HELPERS ====================

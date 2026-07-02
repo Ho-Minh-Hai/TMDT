@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, Users, AlertCircle, List, MessageSquare, ShieldAlert, ShoppingBag,
-    Settings, HelpCircle, Flag, Clock, Ban, ShieldCheck, Download
+    Settings, HelpCircle, Flag, Clock, Ban, ShieldCheck, Download, BarChart3
 } from 'lucide-react';
 import './Admin.css';
 
@@ -13,6 +13,7 @@ import AdminUser from './AdminUser';
 import AdminBannedKeywords from './AdminBannedKeywords';
 import AdminOrder from './AdminOrder';
 import AdminDashboard from './AdminDashboard';
+import AdminRevenue from './AdminRevenue';
 import AdminReports from './AdminReports';
 import AdminViewMessage from './AdminViewMessage';
 
@@ -36,6 +37,12 @@ const Admin = () => {
                         className={`menu-item ${activeTab === 'dashboard' ? 'active' : ''}`}
                         onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }}>
                         <LayoutDashboard size={20} /> Dashboard
+                    </a>
+
+                    <a href="#revenue"
+                        className={`menu-item ${activeTab === 'revenue' ? 'active' : ''}`}
+                        onClick={(e) => { e.preventDefault(); setActiveTab('revenue'); }}>
+                        <BarChart3 size={20} /> Doanh thu
                     </a>
 
                     <a href="#users"
@@ -95,6 +102,9 @@ const Admin = () => {
 
                 {/* 4. Tab Dashboard */}
                 {activeTab === 'dashboard' && <AdminDashboard />}
+
+                {/* 4.5. Tab Doanh thu VIP */}
+                {activeTab === 'revenue' && <AdminRevenue />}
 
                 {/* 5. Tab Báo cáo vi phạm */}
                 {activeTab === 'reports' && <AdminReports />}
